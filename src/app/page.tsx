@@ -1,38 +1,65 @@
-const categories = [
-  { name: "Livres", icon: "📚", tone: "#E9F2E8" }, { name: "Mode", icon: "🧥", tone: "#F2E9E1" },
-  { name: "Parfums", icon: "✨", tone: "#EEE8F5" }, { name: "Beauté", icon: "🧴", tone: "#F6E8E8" },
-  { name: "Bien-être", icon: "🌿", tone: "#E5F0EC" }, { name: "Maison", icon: "🏺", tone: "#F3EEDB" },
-];
+import Image from "next/image";
+import Link from "next/link";
+import { AccountAccess } from "@/components/account-access";
 
 const products = [
-  { name: "Musc blanc — Eau de parfum", shop: "Boutique Démo 01", price: "34,90 €", icon: "🧴", color: "#DFEDE7" },
-  { name: "Le Coran — traduction française", shop: "Boutique Démo 02", price: "22,00 €", icon: "📖", color: "#EFE6D7" },
-  { name: "Abaya Lina — Vert sauge", shop: "Boutique Démo 04", price: "59,90 €", icon: "🥻", color: "#E0E8DE" },
-  { name: "Huile de nigelle premium", shop: "Boutique Démo 03", price: "14,50 €", icon: "🌱", color: "#F1E8CC" },
+  { number: "01", name: "Musc blanc", maker: "Boutique Démo 01", price: "34,90 €", shape: "bottle" },
+  { number: "02", name: "Le Coran", maker: "Boutique Démo 02", price: "22,00 €", shape: "book" },
+  { number: "03", name: "Huile de nigelle", maker: "Boutique Démo 03", price: "14,50 €", shape: "oil" },
+  { number: "04", name: "Abaya Lina", maker: "Boutique Démo 04", price: "59,90 €", shape: "fabric" },
 ];
 
 export default function Home() {
-  return <main>
-    <div className="bg-[#173c32] px-4 py-2 text-center text-xs font-medium tracking-wide text-white">Livraison offerte dès 59 € · Des vendeurs sélectionnés avec soin</div>
-    <header className="border-b border-black/8 bg-[#fffdf8]">
-      <div className="mx-auto flex max-w-7xl items-center gap-5 px-5 py-4 lg:px-8">
-        <a href="#" className="text-2xl font-black tracking-[-0.06em] text-[#173c32]">yaqeen<span className="text-[#c38a3a]">.</span></a>
-        <label className="relative hidden flex-1 md:block"><span className="sr-only">Rechercher</span><input className="w-full rounded-full border border-black/10 bg-white py-3 pl-5 pr-12 text-sm outline-none transition focus:border-[#2f6b58]" placeholder="Rechercher un produit, une marque, une boutique…" /><span className="absolute right-4 top-1/2 -translate-y-1/2">⌕</span></label>
-        <nav className="ml-auto flex items-center gap-5 text-sm font-semibold text-[#26352f]"><a href="#boutiques" className="hidden sm:block">Boutiques</a><a href="#vendeurs" className="hidden lg:block">Vendre sur Yaqeen</a><button aria-label="Compte">♙</button><button aria-label="Panier" className="relative">🛍<span className="absolute -right-2 -top-2 rounded-full bg-[#c38a3a] px-1 text-[9px] text-white">0</span></button></nav>
-      </div>
-      <div className="mx-auto flex max-w-7xl gap-7 overflow-x-auto px-5 pb-3 text-xs font-semibold text-[#4a554f] lg:px-8"><a href="#categories">Toutes les catégories</a><a href="#">Nouveautés</a><a href="#">Livres</a><a href="#">Mode</a><a href="#">Parfums</a><a href="#">Beauté</a><a href="#">Bien-être</a><a href="#" className="text-[#a56621]">Offres</a></div>
-    </header>
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#e9e1d2] text-[#171b18]">
+      <header className="relative z-20 border-b border-[#24231f]/15">
+        <div className="mx-auto flex max-w-[1440px] items-center px-5 py-5 md:px-10">
+          <a href="#" className="brand-mark">yaqeen<span>✦</span></a>
+          <form action="/catalogue" className="mx-auto hidden w-[min(480px,42vw)] md:block"><label className="flex items-center gap-3 rounded-full border border-[#24231f]/20 bg-white/35 px-4 py-2.5"><span>⌕</span><input name="q" className="w-full bg-transparent text-[11px] outline-none" placeholder="Rechercher un produit, une marque, une boutique…" /></label></form>
+          <nav className="ml-auto hidden items-center gap-6 text-[11px] font-medium lg:flex"><Link href="/catalogue">Catalogue</Link><Link href="/catalogue?sort=selection">Nouveautés</Link><Link href="/seller">Vendre sur Yaqeen</Link></nav>
+          <Link href="/catalogue" className="ml-auto rounded-full border border-[#24231f]/20 px-4 py-2 text-[11px] md:hidden">Rechercher</Link>
+          <AccountAccess />
+          <button aria-label="Panier" className="ml-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#24231f] text-[11px] text-[#f3efe5]">0</button>
+        </div>
+      </header>
 
-    <section className="relative overflow-hidden bg-[#f1ebdf]"><div className="hero-pattern absolute inset-0 opacity-30" /><div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
-      <div><div className="mb-5 inline-flex rounded-full border border-[#b68a51]/30 bg-white/60 px-4 py-2 text-xs font-bold uppercase tracking-[.16em] text-[#86612f]">La marketplace qui a du sens</div><h1 className="max-w-2xl font-serif text-5xl leading-[1.02] tracking-tight text-[#173c32] sm:text-6xl lg:text-7xl">Le meilleur du halal, réuni au même endroit.</h1><p className="mt-6 max-w-xl text-base leading-7 text-[#53625c] sm:text-lg">Découvrez des produits sélectionnés et achetez en toute confiance auprès de boutiques indépendantes qui partagent vos valeurs.</p><div className="mt-8 flex flex-wrap gap-3"><a href="#selection" className="rounded-full bg-[#173c32] px-6 py-3.5 text-sm font-bold text-white">Découvrir la sélection</a><a href="#vendeurs" className="rounded-full border border-[#173c32]/20 bg-white/50 px-6 py-3.5 text-sm font-bold text-[#173c32]">Ouvrir ma boutique</a></div><div className="mt-10 flex flex-wrap gap-6 text-xs font-semibold text-[#52615b]"><span>✓ Paiement sécurisé</span><span>✓ Produits vérifiés</span><span>✓ Vendeurs engagés</span></div></div>
-      <div className="relative mx-auto hidden aspect-square w-full max-w-lg md:block"><div className="absolute inset-[12%] rounded-full bg-[#d9c7a7]" /><div className="absolute left-[8%] top-[12%] flex h-44 w-36 rotate-[-8deg] items-center justify-center rounded-[2rem] bg-[#244f42] text-7xl shadow-xl">📖</div><div className="absolute right-[4%] top-[24%] flex h-52 w-40 rotate-[7deg] items-center justify-center rounded-[2rem] bg-[#fffaf0] text-7xl shadow-xl">🧴</div><div className="absolute bottom-[5%] left-[30%] flex h-40 w-40 items-center justify-center rounded-full bg-[#bd8a4b] text-7xl shadow-xl">🌿</div></div>
-    </div></section>
+      <section className="relative min-h-[750px] border-b border-white/15 bg-[#092b5d] text-[#f2eadc] lg:min-h-[810px]">
+        <Image src="/yaqeen-architectural-hero.png" alt="Composition architecturale Yaqeen" fill priority className="object-cover object-[66%_center]" sizes="100vw" />
+        <div className="hero-shade absolute inset-0" />
+        <div className="relative mx-auto flex min-h-[750px] max-w-[1440px] items-end px-5 pb-16 pt-28 md:px-10 lg:min-h-[810px] lg:items-center lg:pb-0">
+          <div className="max-w-[650px]">
+            <p className="mb-8 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.28em]"><span className="h-px w-8 bg-current" />Par la communauté · Pour la communauté</p>
+            <h1 className="display-head text-[clamp(4.1rem,9.2vw,9rem)] leading-[.78] tracking-[-.085em]">CHOISIR<br />MIEUX<span className="text-[#ef6b38]">.</span></h1>
+            <p className="mt-10 max-w-[470px] text-[15px] leading-7 text-[#e7ddcc]/80">La marketplace qui rassemble nos boutiques, nos créateurs et les produits que nous cherchons vraiment — dans un espace pensé avec nous, pour nous.</p>
+            <div className="mt-9 flex flex-wrap items-center gap-5"><Link href="/catalogue" className="primary-pill">Voir tous les produits <span>↗</span></Link><a href="#garanties" className="text-[12px] underline decoration-[#24231f]/30 underline-offset-8">Pourquoi acheter sur Yaqeen ?</a></div>
+          </div>
+        </div>
+        <p className="absolute bottom-5 right-8 hidden rotate-90 origin-right text-[9px] uppercase tracking-[.22em] lg:block">Yaqeen Market · Édition 01</p>
+      </section>
 
-    <section id="categories" className="mx-auto max-w-7xl px-5 py-16 lg:px-8"><div className="mb-8 flex items-end justify-between"><div><p className="eyebrow">Explorer</p><h2 className="section-title">Tout ce qu’il vous faut</h2></div><a href="#" className="hidden text-sm font-bold text-[#2f6b58] sm:block">Voir toutes les catégories →</a></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{categories.map(c => <a href="#selection" key={c.name} className="group rounded-3xl p-4 transition hover:-translate-y-1" style={{backgroundColor:c.tone}}><span className="block py-5 text-center text-5xl transition group-hover:scale-110">{c.icon}</span><span className="block text-center text-sm font-bold text-[#283b34]">{c.name}</span></a>)}</div></section>
+      <section id="garanties" className="border-b border-[#24231f]/15">
+        <div className="mx-auto grid max-w-[1440px] md:grid-cols-[.65fr_1.35fr]">
+          <div className="border-b border-[#24231f]/15 px-5 py-10 md:border-b-0 md:border-r md:px-10 md:py-20"><p className="index-label">01 / Notre point commun</p></div>
+          <div className="px-5 py-12 md:px-14 md:py-20 lg:px-24"><p className="statement max-w-4xl text-[clamp(2.1rem,4.4vw,4.8rem)] leading-[1.02] tracking-[-.055em]">NOS BESOINS.<br /><span>NOS BOUTIQUES.</span><br />NOTRE MARKETPLACE.</p><div className="mt-12 grid gap-8 border-t border-[#24231f]/15 pt-8 text-sm leading-6 text-[#55534b] sm:grid-cols-2"><p>Yaqeen est né d’un constat simple : nous cherchons tous des produits adaptés à nos valeurs, mais les bonnes boutiques restent trop souvent difficiles à trouver.</p><p>Nous les réunissons au même endroit, avec des vendeurs vérifiés, un paiement protégé et une communauté qui participe à faire grandir la plateforme.</p></div></div>
+        </div>
+      </section>
 
-    <section id="selection" className="bg-[#f7f5ef] py-16"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="mb-8"><p className="eyebrow">Nos coups de cœur</p><h2 className="section-title">La sélection Yaqeen</h2></div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{products.map(p => <article key={p.name} className="group overflow-hidden rounded-3xl bg-white p-3 shadow-[0_8px_30px_rgba(26,52,43,.06)]"><div className="relative flex aspect-[4/3] items-center justify-center rounded-[1.25rem] text-7xl" style={{backgroundColor:p.color}}><span className="transition duration-300 group-hover:scale-110">{p.icon}</span><button aria-label="Ajouter aux favoris" className="absolute right-3 top-3 h-9 w-9 rounded-full bg-white/80">♡</button></div><div className="px-2 pb-2 pt-4"><p className="text-xs font-semibold text-[#78837e]">{p.shop} · ★ 4,9</p><h3 className="mt-1 min-h-12 font-semibold leading-6 text-[#21342d]">{p.name}</h3><div className="mt-3 flex items-center justify-between"><span className="font-extrabold text-[#173c32]">{p.price}</span><button className="rounded-full bg-[#edf3ef] px-3 py-2 text-xs font-bold text-[#245344]">Ajouter +</button></div></div></article>)}</div></div></section>
+      <section id="catalogue" className="px-5 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1440px]">
+          <div className="mb-14 flex items-end justify-between"><div><p className="index-label">02 / Produits populaires</p><h2 className="display-head mt-5 text-[clamp(3rem,6vw,6rem)] tracking-[-.07em]">MEILLEURES VENTES</h2></div><Link href="/catalogue" className="hidden text-xs sm:block">Voir tout le catalogue ↗</Link></div>
+          <div className="grid border-l border-t border-[#24231f]/15 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map((product) => <article key={product.name} className="product-card border-b border-r border-[#24231f]/15 p-4"><div className="flex items-center justify-between text-[9px] uppercase tracking-[.18em]"><span>{product.number}</span><button aria-label={`Ajouter ${product.name} aux favoris`}>♡</button></div><div className="object-stage"><div className={`object-form ${product.shape}`}><span>{product.shape === "book" ? "اقرأ" : "Y"}</span></div></div><div className="border-t border-[#24231f]/15 pt-4"><p className="text-[9px] uppercase tracking-[.16em] text-[#77736a]">{product.maker}</p><div className="mt-2 flex items-start justify-between gap-4"><h3 className="text-lg font-bold tracking-[-.04em]">{product.name}</h3><span className="shrink-0 text-xs">{product.price}</span></div></div></article>)}
+          </div>
+        </div>
+      </section>
 
-    <section id="vendeurs" className="mx-auto max-w-7xl px-5 py-16 lg:px-8"><div className="overflow-hidden rounded-[2.5rem] bg-[#173c32] px-6 py-12 text-white sm:px-12 lg:flex lg:items-center lg:justify-between lg:py-16"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[.18em] text-[#d8b681]">Vous êtes une marque ou un créateur ?</p><h2 className="mt-3 font-serif text-4xl sm:text-5xl">Votre boutique mérite d’être découverte.</h2><p className="mt-4 max-w-xl leading-7 text-white/70">Créez votre espace, gérez vos produits et rejoignez une communauté qui recherche exactement ce que vous proposez.</p></div><a href="#" className="mt-8 inline-flex shrink-0 rounded-full bg-[#d5a35f] px-7 py-4 text-sm font-extrabold text-[#173c32] lg:ml-10 lg:mt-0">Devenir vendeur →</a></div></section>
-    <footer className="border-t border-black/8 px-5 py-8 text-center text-xs text-[#6e7873]">© 2026 Yaqeen Market · La marketplace halal de confiance</footer>
-  </main>;
+      <section className="community-section">
+        <div className="community-heading"><p className="index-label">03 / Construite ensemble</p><h2>PLUS QU’UN<br />CATALOGUE<span>.</span></h2><p>Yaqeen grandit avec celles et ceux qui l’utilisent. Les clients recommandent leurs boutiques préférées, les vendeurs partagent leur savoir-faire et la communauté aide à définir ce qui mérite d’être mis en avant.</p></div>
+        <div className="community-grid"><article><span>“</span><p>Enfin un endroit où je peux retrouver plusieurs boutiques de confiance sans passer des heures à chercher.</p><footer><i>SK</i><div><strong>Sarah K.</strong><small>Cliente Yaqeen</small></div></footer></article><article className="community-stat"><strong>1</strong><p>seul compte pour acheter auprès de plusieurs vendeurs de la communauté.</p><div className="community-orbit"><i/><i/><i/><i/></div></article><article><span>“</span><p>Je garde l’identité de ma boutique, tout en touchant une communauté qui comprend déjà mes produits.</p><footer><i>AH</i><div><strong>Boutique Démo 04</strong><small>Vendeur partenaire</small></div></footer></article></div>
+        <div className="community-actions"><p>Une boutique que tout le monde devrait connaître ?</p><a href="#">Recommander un vendeur ↗</a><span>Les recommandations sont étudiées par l’équipe Yaqeen.</span></div>
+      </section>
+
+      <footer className="bg-[#f3efe5] px-5 py-10 md:px-10"><div className="mx-auto flex max-w-[1440px] flex-col gap-7 border-t border-[#24231f]/15 pt-8 text-[10px] uppercase tracking-[.15em] sm:flex-row sm:items-end"><p className="brand-mark text-2xl lowercase tracking-[-.06em]">yaqeen<span>✦</span></p><p className="sm:ml-auto">Paris · France</p><p>© 2026 · Tous droits réservés</p></div></footer>
+    </main>
+  );
 }
