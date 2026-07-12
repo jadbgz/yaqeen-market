@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "apps/mobile/dist/**",
     "apps/mobile/node_modules/**",
     "apps/mobile/scripts/**",
+    "apps/mobile/eslint.config.js",
   ]),
 ]);
 
