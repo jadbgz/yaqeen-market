@@ -8,6 +8,7 @@ Ce dossier transforme le Plan Directeur v1.0 et le Playbook des 22 chantiers en 
 - `DECISIONS.md` : décisions actées, hypothèses et questions ouvertes.
 - `BUSINESS-MODEL.md` : hypothèses économiques et protocole de validation.
 - `audits/AUDIT-TECHNIQUE-2026-07-13.md` : dette produit et critères de remédiation issus de l'audit technique.
+- `architecture/ADR-002-backend-supabase-postgres.md` : décision du socle PostgreSQL, Auth, migrations et RLS.
 - `../ops/audits/technical-findings.csv` : registre exécutable des constats, priorités, chantiers et critères de sortie.
 - `chantiers/C1-validation-marche.md` : acquisition vendeurs et validation acheteurs.
 - `chantiers/C2-charte-et-moderation.md` : cadre religieux et preuves produit.

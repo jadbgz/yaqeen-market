@@ -59,7 +59,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 - A-012 — textes inférieurs à 11–12 px : C18, ouvert ; audit WCAG et échelle typographique accessible.
 - A-013 — favoris, étoiles et contrôles non sémantiques : C13, C18, ouvert ; clavier, lecteur d'écran et valeurs réelles.
 - A-014 — feuille CSS monolithique : C4, ouvert ; styles découpés par surface ou composant.
-- A-015 — absence de tests et de CI : C4, C16, ouvert ; pipeline lint, types, build et tests sur chaque PR.
+- A-015 — absence de tests et de CI : C4, C16, partiellement traité ; workflow web/mobile créé, premier run distant et protection de branche encore requis.
 - A-016 — SEO incomplet : C14, ouvert ; sitemap, robots, métadonnées dynamiques, OpenGraph et données structurées Product.
 
 ## Ordre de traitement recommandé
