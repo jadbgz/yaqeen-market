@@ -23,7 +23,7 @@ export default function RootLayout({
       lang="fr"
       className={`${geistSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><CartProvider>{children}</CartProvider></body>
+      <body className="min-h-full flex flex-col"><div className="prototype-banner">PROTOTYPE DE VALIDATION · PRODUITS, AVIS ET DONNÉES SIMULÉS</div><CartProvider>{children}</CartProvider></body>
     </html>
   );
 }

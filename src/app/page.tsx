@@ -12,7 +12,7 @@ const products = [
 export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#e9e1d2] text-[#171b18]">
-      <header className="relative z-20 border-b border-[#24231f]/15">
+      <header className="relative z-20 border-b border-[#24231f]/15 bg-[#e9e1d2]">
         <div className="mx-auto flex max-w-[1440px] items-center px-5 py-5 md:px-10">
           <a href="#" className="brand-mark">yaqeen<span>✦</span></a>
           <form action="/catalogue" className="mx-auto hidden w-[min(480px,42vw)] md:block"><label className="flex items-center gap-3 rounded-full border border-[#24231f]/20 bg-white/35 px-4 py-2.5"><span>⌕</span><input name="q" className="w-full bg-transparent text-[11px] outline-none" placeholder="Rechercher un produit, une marque, une boutique…" /></label></form>
@@ -21,6 +21,13 @@ export default function Home() {
           <AccountAccess />
           <button aria-label="Panier" className="ml-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#24231f] text-[11px] text-[#f3efe5]">0</button>
         </div>
+        <nav aria-label="Catégories principales" className="border-t border-[#24231f]/10 bg-[#092b5d] text-[#f2eadc]">
+          <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto px-5 md:px-10">
+            <Link href="/catalogue" className="flex shrink-0 items-center gap-2 border-r border-white/15 py-3 pr-5 text-[10px] font-bold"><span aria-hidden="true" className="text-base leading-none">☰</span> Toutes les catégories</Link>
+            {[['Parfums','parfums'],['Cosmétiques','cosmetiques'],['Livres','livres'],['Mode','mode'],['Bien-être','bien-etre'],['Compléments','complements'],['Maison','maison']].map(([label,category]) => <Link key={category} href={`/catalogue?categorie=${category}`} className="shrink-0 px-4 py-3 text-[10px] text-white/80 transition hover:bg-white/10 hover:text-white">{label}</Link>)}
+            <Link href="/catalogue?sort=nouveautes" className="ml-auto shrink-0 py-3 pl-5 text-[10px] font-bold text-[#ef8a61]">Nouveautés</Link>
+          </div>
+        </nav>
       </header>
 
       <section className="relative min-h-[750px] border-b border-white/15 bg-[#092b5d] text-[#f2eadc] lg:min-h-[810px]">
@@ -55,7 +62,7 @@ export default function Home() {
 
       <section className="community-section">
         <div className="community-heading"><p className="index-label">03 / Construite ensemble</p><h2>PLUS QU’UN<br />CATALOGUE<span>.</span></h2><p>Yaqeen grandit avec celles et ceux qui l’utilisent. Les clients recommandent leurs boutiques préférées, les vendeurs partagent leur savoir-faire et la communauté aide à définir ce qui mérite d’être mis en avant.</p></div>
-        <div className="community-grid"><article><span>“</span><p>Enfin un endroit où je peux retrouver plusieurs boutiques de confiance sans passer des heures à chercher.</p><footer><i>SK</i><div><strong>Sarah K.</strong><small>Cliente Yaqeen</small></div></footer></article><article className="community-stat"><strong>1</strong><p>seul compte pour acheter auprès de plusieurs vendeurs de la communauté.</p><div className="community-orbit"><i/><i/><i/><i/></div></article><article><span>“</span><p>Je garde l’identité de ma boutique, tout en touchant une communauté qui comprend déjà mes produits.</p><footer><i>AH</i><div><strong>Boutique Démo 04</strong><small>Vendeur partenaire</small></div></footer></article></div>
+        <div className="community-grid"><article><span>01</span><p>Recommandez les boutiques et créateurs que la communauté devrait pouvoir retrouver sur Yaqeen.</p><footer><i>↗</i><div><strong>Proposer un vendeur</strong><small>Chaque proposition sera étudiée</small></div></footer></article><article className="community-stat"><strong>1</strong><p>seul compte pour acheter auprès de plusieurs vendeurs de la communauté.</p><div className="community-orbit"><i/><i/><i/><i/></div></article><article><span>02</span><p>Partagez les catégories, produits et garanties dont vous avez réellement besoin au quotidien.</p><footer><i>+</i><div><strong>Participer à la construction</strong><small>Les retours orienteront le catalogue</small></div></footer></article></div>
         <div className="community-actions"><p>Une boutique que tout le monde devrait connaître ?</p><a href="#">Recommander un vendeur ↗</a><span>Les recommandations sont étudiées par l’équipe Yaqeen.</span></div>
       </section>
 
