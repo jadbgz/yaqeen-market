@@ -1,0 +1,11 @@
+@import "tailwindcss";
+:root { --background: #fffdf8; --foreground: #172a23; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+button, a, input { font: inherit; }
+button, a { cursor: pointer; }
+.hero-pattern { background-image: radial-gradient(#7c9a8d 1px, transparent 1px); background-size: 24px 24px; }
+.eyebrow { margin-bottom: .5rem; color: #a56d2c; font-size: .72rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.section-title { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; color: #173c32; }
+::selection { background: #d8b681; color: #173c32; }
