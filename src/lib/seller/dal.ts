@@ -19,6 +19,23 @@ export type SellerDashboard = {
   };
 };
 
+export type SellerProduct = {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  status: "draft" | "under_review" | "published" | "rejected" | "archived";
+  createdAt: string;
+  variant: {
+    sku: string;
+    title: string;
+    priceCents: number;
+    currency: string;
+    availableStock: number;
+  } | null;
+  evidenceStatus: "pending" | "approved" | "rejected" | "expired" | "revoked" | null;
+};
+
 export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null> => {
   const viewer = await getViewer();
   if (!viewer) return null;
@@ -91,4 +108,54 @@ export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null
       pendingEvidence,
     },
   };
+});
+
+export const getSellerProducts = cache(async (): Promise<SellerProduct[] | null> => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+
+  const supabase = await createClient();
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, slug, title, category, status, created_at")
+    .eq("shop_id", dashboard.shop.id)
+    .order("created_at", { ascending: false });
+
+  const rows = products ?? [];
+  if (rows.length === 0) return [];
+  const productIds = rows.map((product) => product.id);
+  const [{ data: variants }, { data: evidence }] = await Promise.all([
+    supabase
+      .from("product_variants")
+      .select("product_id, sku, title, price_cents, currency, stock_on_hand, stock_reserved")
+      .in("product_id", productIds)
+      .eq("active", true)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("product_evidence")
+      .select("product_id, status, created_at")
+      .in("product_id", productIds)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  return rows.map((product) => {
+    const variant = variants?.find((item) => item.product_id === product.id);
+    const proof = evidence?.find((item) => item.product_id === product.id);
+    return {
+      id: product.id,
+      slug: product.slug,
+      title: product.title,
+      category: product.category,
+      status: product.status,
+      createdAt: product.created_at,
+      variant: variant ? {
+        sku: variant.sku,
+        title: variant.title,
+        priceCents: variant.price_cents,
+        currency: variant.currency,
+        availableStock: Math.max(0, variant.stock_on_hand - variant.stock_reserved),
+      } : null,
+      evidenceStatus: proof?.status ?? null,
+    };
+  });
 });

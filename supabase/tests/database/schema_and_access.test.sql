@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(32);
+select plan(43);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'shops', 'shops table exists');
@@ -124,6 +124,83 @@ select results_eq(
   $$ select member_role from public.shop_members where user_id = '10000000-0000-0000-0000-000000000001' $$,
   $$ values ('owner'::text) $$,
   'onboarding creates the owner membership'
+);
+
+select results_eq(
+  $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_product_draft' $$,
+  $$ values (1::bigint) $$,
+  'atomic product draft function exists'
+);
+select results_eq(
+  $$ select p.prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_product_draft' $$,
+  $$ values (true) $$,
+  'product draft creation is a security-definer boundary'
+);
+select results_eq(
+  $$ select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_product_draft' $$,
+  $$ values (false) $$,
+  'anonymous visitors cannot create product drafts'
+);
+select results_eq(
+  $$ select has_function_privilege('authenticated', p.oid, 'EXECUTE') from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_product_draft' $$,
+  $$ values (true) $$,
+  'authenticated sellers can execute product draft creation'
+);
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select lives_ok(
+  $$ select public.create_product_draft(
+    (select id from public.shops where slug = 'atelier-test'),
+    'Musc de validation', 'musc-validation', 'Description vérifiée par le test.', 'parfums',
+    'Flacon 50 ml', 'TEST-MUSC-50', 3490, 12, 'seller_declaration',
+    'Déclaration portant sur la composition et le procédé de fabrication.', null, null,
+    'Déclaration vendeur soumise à la revue Yaqeen.'
+  ) $$,
+  'a shop member creates product, variant, stock and evidence atomically'
+);
+reset role;
+
+select results_eq(
+  $$ select count(*)::bigint from public.products where slug = 'musc-validation' $$,
+  $$ values (1::bigint) $$,
+  'the transaction creates exactly one product'
+);
+select results_eq(
+  $$ select status::text from public.products where slug = 'musc-validation' $$,
+  $$ values ('draft'::text) $$,
+  'seller-created products are always drafts'
+);
+select results_eq(
+  $$ select v.price_cents, v.stock_on_hand, v.stock_reserved, v.currency::text from public.product_variants v join public.products p on p.id = v.product_id where p.slug = 'musc-validation' $$,
+  $$ values (3490, 12, 0, 'EUR'::text) $$,
+  'price and physical stock are persisted without a reserved quantity'
+);
+select results_eq(
+  $$ select e.status::text, e.kind::text, e.submitted_by from public.product_evidence e join public.products p on p.id = e.product_id where p.slug = 'musc-validation' $$,
+  $$ values ('pending'::text, 'seller_declaration'::text, '10000000-0000-0000-0000-000000000001'::uuid) $$,
+  'first evidence remains pending and is attributed to its submitter'
+);
+
+insert into auth.users (id, email, raw_user_meta_data)
+values ('10000000-0000-0000-0000-000000000002', 'outsider-test@yaqeen.local', '{"display_name":"Outsider Test"}');
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000002","role":"authenticated"}';
+select throws_ok(
+  $$ select public.create_product_draft(
+    (select id from public.shops where slug = 'atelier-test'),
+    'Produit interdit', 'produit-interdit', null, 'parfums', 'Standard', 'OUTSIDER-01',
+    1000, 1, 'seller_declaration', 'Déclaration suffisamment détaillée pour le test.', null, null, null
+  ) $$,
+  '42501', 'shop_membership_required',
+  'an authenticated outsider cannot write into another shop'
+);
+reset role;
+
+select results_eq(
+  $$ select count(*)::bigint from public.products where slug = 'produit-interdit' $$,
+  $$ values (0::bigint) $$,
+  'a refused transaction leaves no partial product behind'
 );
 
 select * from finish();

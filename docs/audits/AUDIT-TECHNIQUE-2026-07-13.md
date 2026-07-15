@@ -36,13 +36,13 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 ### A-004 — Seller Center non opérationnel
 
 - Chantiers : C11, C17
-- État : partiel au 15 juillet ; création de boutique transactionnelle, rôle vendeur, adhésion propriétaire et tableau de bord fondé sur les données persistées. Catalogue, commandes et expédition restent ouverts.
+- État : partiel au 15 juillet ; création de boutique transactionnelle, rôle vendeur, tableau de bord, liste catalogue et création atomique produit/variante/stock/preuve sont persistés. Édition, commandes et expédition restent ouverts.
 - Sortie attendue : onboarding entreprise, création de boutique, catalogue, variantes, stock, commandes, expédition et retours utilisables sans intervention technique.
 
 ### A-005 — La confiance halal n'est pas un objet métier
 
 - Chantiers : C2, C6, C7, C13
-- État : partiellement traité dans l'UI mobile, modèle serveur absent.
+- État : partiellement traité ; modèle serveur de preuve présent et première soumission vendeur persistée, revue opérateur et affichage public détaillé encore absents.
 - Sortie attendue : modèle de preuve versionné distinguant déclaration vendeur, contrôle documentaire, certificat tiers et analyse ; organisme, numéro, dates, périmètre, document et décision de modération visibles sur la fiche.
 
 ## Incohérences fonctionnelles
@@ -51,7 +51,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 - A-007 — produits dupliqués : corrigé entre la home et le catalogue web ; la convergence avec Expo et la future API reste ouverte.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
 - A-009 — frais de port calculés au panier global : C9, C12, ouvert ; règles et seuils par vendeur.
-- A-010 — stock absent et quantités illimitées : C6, C9, ouvert ; stock disponible, réservé, vendu et politique de survente.
+- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock physique et réservé persistés à la création vendeur, réservation atomique et bornage du panier encore ouverts.
 
 ## Qualité, performance et accessibilité
 
