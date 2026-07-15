@@ -2,7 +2,7 @@
 
 ## Verdict
 
-Le projet possède une direction artistique cohérente et des parcours front-end démontrables, mais il reste un prototype à données simulées. Les fondations d'une marketplace exploitable — persistance serveur, identité, catalogue administrable, paiement multi-vendeurs, logistique et preuve de conformité — ne sont pas encore construites.
+Le projet possède une direction artistique cohérente et des parcours front-end démontrables. Depuis le 15 juillet, l'identité, le catalogue vendeur, la modération et le storefront web reposent sur PostgreSQL ; le paiement multi-vendeurs, la logistique, les images et la convergence mobile restent à construire.
 
 Cet audit est conservé publiquement pour documenter la dette technique et les corrections. La matrice de pilotage détaillée est tenue dans le dépôt privé Yaqeen.
 
@@ -42,28 +42,29 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 ### A-005 — La confiance halal n'est pas un objet métier
 
 - Chantiers : C2, C6, C7, C13
-- État : partiellement traité ; modèle serveur de preuve présent et première soumission vendeur persistée, revue opérateur et affichage public détaillé encore absents.
+- État : partiellement traité ; modèle serveur, soumission, revue opérateur et affichage public détaillé livrés. Pièces binaires, expiration, révocation et doctrine par catégorie restent ouverts.
 - Sortie attendue : modèle de preuve versionné distinguant déclaration vendeur, contrôle documentaire, certificat tiers et analyse ; organisme, numéro, dates, périmètre, document et décision de modération visibles sur la fiche.
 
 ## Incohérences fonctionnelles
 
 - A-018 — auto-publication et auto-approbation par insert PostgREST direct : corrigé le 15 juillet ; grants et policies de mutation directe retirés sur produits, variantes et preuves, avec trois tests pgTAP reproduisant les attaques. Voir ADR-005.
 - A-019 — aucun chemin légitime vers `published` : corrigé le 15 juillet ; soumission boutique/produit, décisions opérateur, approbation atomique de la preuve et journal d'audit livrés. Voir ADR-006.
+- A-020 — storefront déconnecté de PostgreSQL : corrigé le 15 juillet ; home, catalogue et fiche utilisent uniquement les produits publiés avec boutique et preuve approuvées. Fixtures web supprimées. Voir ADR-007.
 
 - A-006 — compteur panier de la home web : corrigé le 15 juillet, lien et quantité utilisent le `CartProvider` partagé.
-- A-007 — produits dupliqués : corrigé entre la home et le catalogue web ; la convergence avec Expo et la future API reste ouverte.
+- A-007 — produits dupliqués : corrigé sur le web, dont la source statique est supprimée ; la convergence Expo reste ouverte.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
-- A-009 — frais de port calculés au panier global : C9, C12, ouvert ; règles et seuils par vendeur.
-- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock physique et réservé persistés à la création vendeur, réservation atomique et bornage du panier encore ouverts.
+- A-009 — frais de port calculés au panier global : calcul fictif retiré du web ; règles et seuils persistés par vendeur restent ouverts.
+- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock disponible affiché et quantité bornée sur la fiche web, réservation atomique et revalidation serveur au checkout restent ouvertes.
 
 ## Qualité, performance et accessibilité
 
 - A-011 — médias lourds et actifs inutilisés : C14, ouvert ; budget d'image, AVIF/WebP et nettoyage des actifs.
 - A-012 — textes inférieurs à 11–12 px : C18, ouvert ; audit WCAG et échelle typographique accessible.
-- A-013 — favoris, étoiles et contrôles non sémantiques : C13, C18, ouvert ; clavier, lecteur d'écran et valeurs réelles.
+- A-013 — favoris, étoiles et contrôles non sémantiques : partiel ; favoris et avis fictifs retirés du storefront, audit clavier et lecteur d'écran restant.
 - A-014 — feuille CSS monolithique : C4, ouvert ; styles découpés par surface ou composant.
 - A-015 — absence de tests et de CI : C4, C16, partiellement traité ; workflow web/mobile créé, premier run distant et protection de branche encore requis.
-- A-016 — SEO incomplet : C14, ouvert ; sitemap, robots, métadonnées dynamiques, OpenGraph et données structurées Product.
+- A-016 — SEO incomplet : C14, partiel ; métadonnées dynamiques, canonical, OpenGraph et données structurées Product livrés. Sitemap, robots public et images sociales restent ouverts.
 - A-017 — dépendance transitive PostCSS : sous surveillance au 15 juillet ; `npm audit` signale deux vulnérabilités modérées via Next.js 16.2.10. Aucun risque élevé/critique. Le correctif automatique proposé rétrograde vers Next.js 9 et ne doit pas être appliqué ; mise à niveau dès publication d'une version Next.js corrigée compatible.
 
 ## Ordre de traitement recommandé
@@ -74,4 +75,4 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 4. C9/C10/C12 : commande multi-vendeurs, livraison et paiement.
 5. C13/C14/C16/C18 : confiance, SEO, sécurité, performance et accessibilité avant ouverture.
 
-Le prototype doit continuer d'afficher explicitement que ses produits, chiffres, avis et contrôles sont simulés jusqu'au branchement de données vérifiées.
+Les commandes et paiements doivent rester explicitement désactivés jusqu'à leur branchement réel. Aucun chiffre commercial, avis, frais de livraison ou garantie de paiement ne doit être simulé.
