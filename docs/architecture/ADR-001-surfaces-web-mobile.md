@@ -38,7 +38,7 @@ Les données, prix, stocks, commandes, identités et règles de conformité vive
 
 ## Pourquoi pas une app vendeur native tout de suite
 
-Le Seller Center existant couvre l'onboarding, le catalogue et les commandes sur mobile web. La priorité native sera donnée à l'acheteur. Les fonctions vendeur natives ne seront engagées qu'après mesure de la fréquence de préparation, du besoin de scan et du taux d'usage mobile.
+Le Seller Center responsive couvre désormais la création sécurisée d'une boutique et son état réel. Catalogue et commandes restent à construire. La priorité native sera donnée à l'acheteur ; les fonctions vendeur natives ne seront engagées qu'après mesure de la fréquence de préparation, du besoin de scan et du taux d'usage mobile.
 
 ## Gate de mise en œuvre
 

@@ -36,7 +36,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 ### A-004 — Seller Center non opérationnel
 
 - Chantiers : C11, C17
-- État : ouvert ; interface de démonstration seulement.
+- État : partiel au 15 juillet ; création de boutique transactionnelle, rôle vendeur, adhésion propriétaire et tableau de bord fondé sur les données persistées. Catalogue, commandes et expédition restent ouverts.
 - Sortie attendue : onboarding entreprise, création de boutique, catalogue, variantes, stock, commandes, expédition et retours utilisables sans intervention technique.
 
 ### A-005 — La confiance halal n'est pas un objet métier
@@ -49,7 +49,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 
 - A-006 — compteur panier de la home web : corrigé le 15 juillet, lien et quantité utilisent le `CartProvider` partagé.
 - A-007 — produits dupliqués : corrigé entre la home et le catalogue web ; la convergence avec Expo et la future API reste ouverte.
-- A-008 — contrôles décoratifs sans action : C8, C11, C13 ; partiellement corrigé sur mobile, audit complet web/Seller Center restant.
+- A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
 - A-009 — frais de port calculés au panier global : C9, C12, ouvert ; règles et seuils par vendeur.
 - A-010 — stock absent et quantités illimitées : C6, C9, ouvert ; stock disponible, réservé, vendu et politique de survente.
 

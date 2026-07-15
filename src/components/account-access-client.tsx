@@ -17,7 +17,7 @@ function FieldError({ messages }: { messages?: string[] }) {
   return <span className="account-error">{messages[0]}</span>;
 }
 
-export function AccountAccessClient({ viewer }: { viewer: Viewer | null }) {
+export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | null; redirectTo: string }) {
   const [open, setOpen] = useState<Mode | null>(null);
   const initialAuthState: AuthState = { status: "idle" };
   const [loginState, loginAction, loginPending] = useActionState(login, initialAuthState);
@@ -56,6 +56,7 @@ export function AccountAccessClient({ viewer }: { viewer: Viewer | null }) {
             <h2>{open === "login" ? "Connectez-vous." : "Rejoignez la communauté."}</h2>
             <p className="account-lead">{open === "login" ? "Retrouvez vos commandes, vos favoris et toutes vos boutiques." : "Un seul compte pour acheter auprès de tous les vendeurs Yaqeen."}</p>
             <form action={open === "login" ? loginAction : signupAction}>
+              <input type="hidden" name="redirectTo" value={redirectTo} />
               {open === "join" && <label>Votre nom<input name="displayName" autoComplete="name" required minLength={2} maxLength={80} /><FieldError messages={state.fieldErrors?.displayName} /></label>}
               <label>Adresse e-mail<input name="email" type="email" autoComplete="email" placeholder="vous@exemple.fr" required /><FieldError messages={state.fieldErrors?.email} /></label>
               <label>Mot de passe<input name="password" type="password" autoComplete={open === "login" ? "current-password" : "new-password"} placeholder="8 caractères minimum" required minLength={8} maxLength={72} /><FieldError messages={state.fieldErrors?.password} /></label>

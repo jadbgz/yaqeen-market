@@ -48,6 +48,12 @@ function providerError(message: string): AuthState {
   return { status: "error", message: "La demande n’a pas pu aboutir. Réessayez dans quelques instants." };
 }
 
+function safeRedirect(value: FormDataEntryValue | null) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/compte";
+}
+
 export async function login(
   _previousState: AuthState,
   formData: FormData,
@@ -56,6 +62,7 @@ export async function login(
     email: formData.get("email"),
     password: formData.get("password"),
   });
+  const redirectTo = safeRedirect(formData.get("redirectTo"));
 
   if (!parsed.success) {
     return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
@@ -66,7 +73,7 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return providerError(error.message);
 
-  redirect("/compte");
+  redirect(redirectTo);
 }
 
 export async function signup(
@@ -78,6 +85,7 @@ export async function signup(
     email: formData.get("email"),
     password: formData.get("password"),
   });
+  const redirectTo = safeRedirect(formData.get("redirectTo"));
 
   if (!parsed.success) {
     return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
@@ -90,12 +98,12 @@ export async function signup(
     password: parsed.data.password,
     options: {
       data: { display_name: parsed.data.displayName },
-      emailRedirectTo: `${getSiteUrl()}/auth/confirm?next=/compte`,
+      emailRedirectTo: `${getSiteUrl()}/auth/confirm?next=${encodeURIComponent(redirectTo)}`,
     },
   });
 
   if (error) return providerError(error.message);
-  if (data.session) redirect("/compte");
+  if (data.session) redirect(redirectTo);
 
   return {
     status: "confirmation",
