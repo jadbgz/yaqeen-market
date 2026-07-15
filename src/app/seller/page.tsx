@@ -18,7 +18,7 @@ function Metric({ label, value, detail, accent }: { label: string; value: string
 
 export default async function SellerPage() {
   if (!getSupabaseConfig()) {
-    return <SellerGate><section className="seller-gate-copy"><p>ENVIRONNEMENT NON RELIÉ</p><h1>Le Seller Center<br /><span>est prêt.</span></h1><p>Ajoutez les variables Supabase de cet environnement pour activer les comptes et la création sécurisée de boutiques.</p><Link href="/pilotage">Voir l’état technique →</Link></section></SellerGate>;
+    return <SellerGate><section className="seller-gate-copy"><p>ENVIRONNEMENT NON RELIÉ</p><h1>Le Seller Center<br /><span>est prêt.</span></h1><p>Ajoutez les variables Supabase de cet environnement pour activer les comptes et la création sécurisée de boutiques.</p><Link href="/">Retour à la marketplace →</Link></section></SellerGate>;
   }
 
   const viewer = await getViewer();

@@ -44,3 +44,13 @@ next-env.d.ts
 # supabase local runtime
 /supabase/.branches/
 /supabase/.temp/
+
+# internal operations are versioned only in the private Yaqeen repository
+/ops/
+/src/app/pilotage/
+/src/data/chantiers.ts
+/docs/BUSINESS-MODEL.md
+/docs/DECISIONS.md
+/docs/DEPLOYMENT-MATRIX.md
+/docs/PROGRAMME.md
+/docs/chantiers/

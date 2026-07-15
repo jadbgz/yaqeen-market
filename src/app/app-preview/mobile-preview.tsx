@@ -21,7 +21,7 @@ export default function MobilePreview() {
         <h1>UNE APP POUR<br />ACHETER EN<br /><span>CONFIANCE.</span></h1>
         <p>Une marketplace communautaire, pensée nativement pour iOS et Android. Le catalogue, le panier et le compte seront partagés avec le site web, sans sacrifier l’expérience mobile.</p>
         <div className="app-platforms"><span>iOS</span><span>Android</span><span>Web associé</span></div>
-        <a href="/pilotage">Voir le plan de déploiement →</a>
+        <a href="/catalogue">Explorer la marketplace →</a>
       </section>
 
       <section className="phone-stage" aria-label="Aperçu interactif de l'application Yaqeen">

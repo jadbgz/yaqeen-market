@@ -4,7 +4,7 @@
 
 Le projet possède une direction artistique cohérente et des parcours front-end démontrables, mais il reste un prototype à données simulées. Les fondations d'une marketplace exploitable — persistance serveur, identité, catalogue administrable, paiement multi-vendeurs, logistique et preuve de conformité — ne sont pas encore construites.
 
-Cet audit devient une entrée formelle du programme. La matrice opérationnelle correspondante est tenue dans `ops/audits/technical-findings.csv`.
+Cet audit est conservé publiquement pour documenter la dette technique et les corrections. La matrice de pilotage détaillée est tenue dans le dépôt privé Yaqeen.
 
 ## État après premières corrections
 
