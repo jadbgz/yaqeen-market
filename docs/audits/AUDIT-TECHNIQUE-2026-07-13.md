@@ -12,17 +12,17 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 
 ## Constats critiques
 
-### A-001 — Absence de backend et de base de données
+### A-001 — Backend et base de données à rendre opérationnels
 
 - Chantiers : C4, C6, C15, C16
-- État : ouvert
+- État : partiel au 15 juillet ; schéma PostgreSQL, migration, RLS, configuration locale, tests pgTAP et CI créés. Exécution distante et sauvegardes non validées.
 - Risque : aucune source de vérité, concurrence d'écriture impossible à gérer, données non administrables.
 - Sortie attendue : architecture validée, base PostgreSQL, migrations versionnées, API authentifiée, environnements local/staging/production et sauvegardes testées.
 
-### A-002 — Authentification factice
+### A-002 — Authentification incomplète
 
 - Chantiers : C5, C16
-- État : ouvert
+- État : partiel au 15 juillet ; inscription, confirmation e-mail PKCE, connexion, sessions SSR, espace compte protégé et déconnexion câblés. Récupération, suppression, rôles et tests E2E restent ouverts.
 - Risque : aucune identité client, vendeur ou opérateur ; impossibilité de sécuriser commandes et boutiques.
 - Sortie attendue : inscription, connexion, vérification d'adresse, récupération, déconnexion, suppression de compte, rôles et sessions testés.
 
@@ -47,8 +47,8 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 
 ## Incohérences fonctionnelles
 
-- A-006 — compteur panier de la home web non connecté : C9, ouvert ; remplacer le bouton statique par le composant panier partagé.
-- A-007 — produits dupliqués entre la home et la source catalogue : C6, ouvert ; une seule source de vérité.
+- A-006 — compteur panier de la home web : corrigé le 15 juillet, lien et quantité utilisent le `CartProvider` partagé.
+- A-007 — produits dupliqués : corrigé entre la home et le catalogue web ; la convergence avec Expo et la future API reste ouverte.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; partiellement corrigé sur mobile, audit complet web/Seller Center restant.
 - A-009 — frais de port calculés au panier global : C9, C12, ouvert ; règles et seuils par vendeur.
 - A-010 — stock absent et quantités illimitées : C6, C9, ouvert ; stock disponible, réservé, vendu et politique de survente.
@@ -61,6 +61,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 - A-014 — feuille CSS monolithique : C4, ouvert ; styles découpés par surface ou composant.
 - A-015 — absence de tests et de CI : C4, C16, partiellement traité ; workflow web/mobile créé, premier run distant et protection de branche encore requis.
 - A-016 — SEO incomplet : C14, ouvert ; sitemap, robots, métadonnées dynamiques, OpenGraph et données structurées Product.
+- A-017 — dépendance transitive PostCSS : sous surveillance au 15 juillet ; `npm audit` signale deux vulnérabilités modérées via Next.js 16.2.10. Aucun risque élevé/critique. Le correctif automatique proposé rétrograde vers Next.js 9 et ne doit pas être appliqué ; mise à niveau dès publication d'une version Next.js corrigée compatible.
 
 ## Ordre de traitement recommandé
 

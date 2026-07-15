@@ -22,10 +22,20 @@ Le choix ne signifie pas que les clients accèdent librement à toutes les table
 
 - création et liaison du projet Supabase distant ;
 - choix définitif d'hébergement et analyse contractuelle/RGPD ;
-- intégration `@supabase/ssr` dans Next.js ;
 - stockage des documents de preuve ;
 - commandes, paiements Stripe Connect et webhooks ;
 - génération automatique des types TypeScript.
+
+## État d'implémentation — 15 juillet 2026
+
+- environnement local Supabase initialisé et versionné ;
+- clients navigateur/serveur isolés derrière `src/lib/supabase` ;
+- sessions SSR en cookies rafraîchies par le Proxy Next.js 16 ;
+- identité vérifiée côté serveur avec `getClaims()`, jamais avec `getSession()` pour une décision d'autorisation ;
+- inscription e-mail/mot de passe en PKCE, confirmation, connexion et déconnexion câblées ;
+- 23 assertions pgTAP et lint PostgreSQL ajoutés à la CI.
+
+`@supabase/ssr` reste officiellement en bêta. Son usage est donc encapsulé afin de limiter l'impact d'une évolution de son API. La migration n'a pas pu être exécutée localement sur la machine de développement, faute de runtime Docker ; la CI constitue le premier environnement d'exécution reproductible.
 
 ## Règles
 

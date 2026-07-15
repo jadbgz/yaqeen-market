@@ -13,6 +13,19 @@ permissions:
   contents: read
 
 jobs:
+  database:
+    name: Database — migrations, RLS and pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+      - run: supabase db start
+      - run: supabase test db --local
+      - run: supabase db lint --local --level warning --fail-on error
+
   web:
     name: Web — lint and build
     runs-on: ubuntu-latest

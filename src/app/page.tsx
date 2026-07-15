@@ -1,13 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AccountAccess } from "@/components/account-access";
-
-const products = [
-  { number: "01", name: "Musc blanc", maker: "Boutique Démo 01", price: "34,90 €", shape: "bottle" },
-  { number: "02", name: "Le Coran", maker: "Boutique Démo 02", price: "22,00 €", shape: "book" },
-  { number: "03", name: "Huile de nigelle", maker: "Boutique Démo 03", price: "14,50 €", shape: "oil" },
-  { number: "04", name: "Abaya Lina", maker: "Boutique Démo 04", price: "59,90 €", shape: "fabric" },
-];
+import { CartLink } from "@/components/cart-link";
+import { formatPrice, products } from "@/data/products";
 
 export default function Home() {
   return (
@@ -19,7 +14,7 @@ export default function Home() {
           <nav className="ml-auto hidden items-center gap-6 text-[11px] font-medium lg:flex"><Link href="/catalogue">Catalogue</Link><Link href="/catalogue?sort=selection">Nouveautés</Link><Link href="/seller">Vendre sur Yaqeen</Link></nav>
           <Link href="/catalogue" className="ml-auto rounded-full border border-[#24231f]/20 px-4 py-2 text-[11px] md:hidden">Rechercher</Link>
           <AccountAccess />
-          <button aria-label="Panier" className="ml-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#24231f] text-[11px] text-[#f3efe5]">0</button>
+          <CartLink variant="icon" />
         </div>
         <nav aria-label="Catégories principales" className="border-t border-[#24231f]/10 bg-[#092b5d] text-[#f2eadc]">
           <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto px-5 md:px-10">
@@ -55,7 +50,7 @@ export default function Home() {
         <div className="mx-auto max-w-[1440px]">
           <div className="mb-14 flex items-end justify-between"><div><p className="index-label">02 / Produits populaires</p><h2 className="display-head mt-5 text-[clamp(3rem,6vw,6rem)] tracking-[-.07em]">MEILLEURES VENTES</h2></div><Link href="/catalogue" className="hidden text-xs sm:block">Voir tout le catalogue ↗</Link></div>
           <div className="grid border-l border-t border-[#24231f]/15 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => <article key={product.name} className="product-card border-b border-r border-[#24231f]/15 p-4"><div className="flex items-center justify-between text-[9px] uppercase tracking-[.18em]"><span>{product.number}</span><button aria-label={`Ajouter ${product.name} aux favoris`}>♡</button></div><div className="object-stage"><div className={`object-form ${product.shape}`}><span>{product.shape === "book" ? "اقرأ" : "Y"}</span></div></div><div className="border-t border-[#24231f]/15 pt-4"><p className="text-[9px] uppercase tracking-[.16em] text-[#77736a]">{product.maker}</p><div className="mt-2 flex items-start justify-between gap-4"><h3 className="text-lg font-bold tracking-[-.04em]">{product.name}</h3><span className="shrink-0 text-xs">{product.price}</span></div></div></article>)}
+            {products.slice(0,4).map((product,index) => <Link href={`/produit/${product.slug}`} key={product.slug} className="product-card border-b border-r border-[#24231f]/15 p-4"><div className="flex items-center justify-between text-[9px] uppercase tracking-[.18em]"><span>{String(index+1).padStart(2,"0")}</span><span aria-hidden="true">↗</span></div><div className="object-stage"><div className={`object-form ${product.shape}`}><span>{product.shape === "book" ? "اقرأ" : "Y"}</span></div></div><div className="border-t border-[#24231f]/15 pt-4"><p className="text-[9px] uppercase tracking-[.16em] text-[#77736a]">{product.shop}</p><div className="mt-2 flex items-start justify-between gap-4"><h3 className="text-lg font-bold tracking-[-.04em]">{product.name}</h3><span className="shrink-0 text-xs">{formatPrice(product.price)}</span></div></div></Link>)}
           </div>
         </div>
       </section>
