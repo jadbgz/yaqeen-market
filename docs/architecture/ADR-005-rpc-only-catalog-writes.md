@@ -14,6 +14,7 @@ La RLS vérifiait l'appartenance à la boutique, pas la légitimité du statut d
 
 Les clients authentifiés conservent la lecture RLS mais ne disposent plus d'aucun droit direct d'insertion, modification ou suppression sur :
 
+- `shops` pour sa création et son contenu soumis à revue ;
 - `products` ;
 - `product_variants` ;
 - `product_evidence`.

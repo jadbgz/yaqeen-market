@@ -33,7 +33,7 @@ Le choix ne signifie pas que les clients accèdent librement à toutes les table
 - sessions SSR en cookies rafraîchies par le Proxy Next.js 16 ;
 - identité vérifiée côté serveur avec `getClaims()`, jamais avec `getSession()` pour une décision d'autorisation ;
 - inscription e-mail/mot de passe en PKCE, confirmation, connexion et déconnexion câblées ;
-- 51 assertions pgTAP et lint PostgreSQL ajoutés à la CI, incluant l'onboarding vendeur, la création atomique d'un brouillon produit et trois scénarios d'attaque directe du catalogue.
+- 77 assertions pgTAP et lint PostgreSQL ajoutés à la CI, incluant l'onboarding vendeur, la création atomique, les attaques directes et le workflow complet de modération.
 
 `@supabase/ssr` reste officiellement en bêta. Son usage est donc encapsulé afin de limiter l'impact d'une évolution de son API. La migration n'a pas pu être exécutée localement sur la machine de développement, faute de runtime Docker ; la CI constitue le premier environnement d'exécution reproductible.
 

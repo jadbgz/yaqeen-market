@@ -10,4 +10,5 @@ Les informations commerciales, le pipeline de prospection, les hypothèses de pr
 - `architecture/ADR-003-secure-seller-onboarding.md` : frontière transactionnelle de création d'une boutique vendeur.
 - `architecture/ADR-004-atomic-product-draft.md` : création atomique du produit, de sa variante, de son stock et de sa preuve.
 - `architecture/ADR-005-rpc-only-catalog-writes.md` : fermeture des contournements PostgREST et écritures catalogue exclusivement par RPC.
+- `architecture/ADR-006-moderation-state-machine.md` : transitions vendeur/opérateur, publication atomique et journal des décisions.
 Les ADR décrivent l'état du système au moment de leur adoption. Ils ne constituent ni une promesse commerciale ni une certification de conformité.

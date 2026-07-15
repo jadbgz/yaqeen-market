@@ -21,7 +21,7 @@ const priceSchema = z.string().trim().regex(/^\d{1,6}(?:[,.]\d{1,2})?$/, "Saisis
 const productSchema = z.object({
   title: z.string().trim().min(2, "Le titre doit contenir au moins 2 caractères.").max(180),
   slug: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Utilisez uniquement lettres minuscules, chiffres et tirets."),
-  description: z.string().trim().max(5000, "La description ne peut pas dépasser 5 000 caractères."),
+  description: z.string().trim().min(40, "Décrivez le produit en au moins 40 caractères avant sa future revue.").max(5000, "La description ne peut pas dépasser 5 000 caractères."),
   category: z.enum(["parfums", "cosmetiques", "livres", "mode", "bien-etre", "complements", "maison"]),
   variantTitle: z.string().trim().min(2, "Précisez le format de cette variante.").max(120),
   sku: z.string().trim().toUpperCase().min(3).max(64).regex(/^[A-Z0-9][A-Z0-9._-]+$/, "Utilisez lettres, chiffres, points, tirets ou underscores."),
@@ -31,7 +31,7 @@ const productSchema = z.object({
   evidenceScope: z.string().trim().min(10, "Décrivez précisément ce que couvre cette preuve.").max(2000),
   issuerName: z.string().trim().max(180),
   referenceNumber: z.string().trim().max(180),
-  publicSummary: z.string().trim().max(1000),
+  publicSummary: z.string().trim().min(20, "Proposez un résumé factuel d’au moins 20 caractères.").max(1000),
 }).superRefine((data, context) => {
   if (data.evidenceKind === "third_party_certificate" && !data.issuerName) {
     context.addIssue({ code: "custom", path: ["issuerName"], message: "L’organisme est obligatoire pour un certificat." });

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(51);
+select plan(77);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'shops', 'shops table exists');
@@ -11,6 +11,7 @@ select has_table('public', 'shop_members', 'shop_members table exists');
 select has_table('public', 'products', 'products table exists');
 select has_table('public', 'product_variants', 'product_variants table exists');
 select has_table('public', 'product_evidence', 'product_evidence table exists');
+select has_table('public', 'moderation_decisions', 'moderation decisions table exists');
 
 select results_eq(
   $$
@@ -18,10 +19,10 @@ select results_eq(
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relname in ('profiles', 'shops', 'shop_members', 'products', 'product_variants', 'product_evidence')
+      and c.relname in ('profiles', 'shops', 'shop_members', 'products', 'product_variants', 'product_evidence', 'moderation_decisions')
       and c.relrowsecurity
   $$,
-  $$ values (6::bigint) $$,
+  $$ values (7::bigint) $$,
   'RLS is enabled on every exposed domain table'
 );
 
@@ -29,25 +30,29 @@ select policies_are('public', 'profiles', array[
   'profiles_self_select', 'profiles_self_update'
 ]);
 select policies_are('public', 'shops', array[
-  'shops_public_read', 'shops_owner_insert', 'shops_member_update'
+  'shops_public_read', 'shops_operator_read'
 ]);
 select policies_are('public', 'shop_members', array[
   'shop_members_member_read', 'shop_members_owner_insert'
 ]);
 select policies_are('public', 'products', array[
-  'products_public_read'
+  'products_public_read', 'products_operator_read'
 ]);
 select policies_are('public', 'product_variants', array[
-  'variants_public_read'
+  'variants_public_read', 'variants_operator_read'
 ]);
 select policies_are('public', 'product_evidence', array[
-  'evidence_public_read'
+  'evidence_public_read', 'evidence_operator_read'
+]);
+select policies_are('public', 'moderation_decisions', array[
+  'moderation_decisions_operator_read'
 ]);
 
 select has_index('public', 'products', 'products_shop_status_idx', 'product review queries have a shop/status index');
 select has_index('public', 'product_variants', 'variants_product_active_idx', 'active variant queries have a product index');
 select has_index('public', 'product_evidence', 'evidence_product_status_idx', 'evidence review queries have a product/status index');
 select has_index('public', 'shops', 'shops_owner_unique_idx', 'an account can own only one shop during the initial release');
+select has_index('public', 'moderation_decisions', 'moderation_decisions_entity_idx', 'moderation history has an entity timeline index');
 
 select results_eq(
   $$ select has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE') $$,
@@ -98,6 +103,16 @@ select results_eq(
   $$ select has_table_privilege('authenticated', 'public.product_evidence', 'INSERT') $$,
   $$ values (false) $$,
   'authenticated clients cannot approve evidence through a direct insert'
+);
+select results_eq(
+  $$ select has_table_privilege('authenticated', 'public.shops', 'INSERT') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot bypass shop onboarding with a direct insert'
+);
+select results_eq(
+  $$ select has_column_privilege('authenticated', 'public.shops', 'description', 'UPDATE') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot change a submitted or approved shop directly'
 );
 
 select col_not_null('public', 'product_variants', 'stock_on_hand', 'physical stock cannot be null');
@@ -177,7 +192,7 @@ set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001",
 select lives_ok(
   $$ select public.create_product_draft(
     (select id from public.shops where slug = 'atelier-test'),
-    'Musc de validation', 'musc-validation', 'Description vérifiée par le test.', 'parfums',
+    'Musc de validation', 'musc-validation', 'Description produit complète et vérifiée par le test automatisé.', 'parfums',
     'Flacon 50 ml', 'TEST-MUSC-50', 3490, 12, 'seller_declaration',
     'Déclaration portant sur la composition et le procédé de fabrication.', null, null,
     'Déclaration vendeur soumise à la revue Yaqeen.'
@@ -228,6 +243,31 @@ select results_eq(
   'a refused transaction leaves no partial product behind'
 );
 
+select results_eq(
+  $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname in ('submit_shop_for_review', 'submit_product_for_review', 'review_shop_submission', 'review_product_submission') $$,
+  $$ values (4::bigint) $$,
+  'the four moderation transition functions exist'
+);
+select results_eq(
+  $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname in ('submit_shop_for_review', 'submit_product_for_review', 'review_shop_submission', 'review_product_submission') and p.prosecdef $$,
+  $$ values (4::bigint) $$,
+  'all moderation transitions are security-definer boundaries'
+);
+select results_eq(
+  $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname in ('submit_shop_for_review', 'submit_product_for_review', 'review_shop_submission', 'review_product_submission') and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
+  $$ values (0::bigint) $$,
+  'anonymous visitors cannot execute moderation transitions'
+);
+select results_eq(
+  $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname in ('submit_shop_for_review', 'submit_product_for_review', 'review_shop_submission', 'review_product_submission') and has_function_privilege('authenticated', p.oid, 'EXECUTE') $$,
+  $$ values (4::bigint) $$,
+  'authenticated sessions can reach transitions that enforce their role internally'
+);
+
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
 select throws_ok(
@@ -249,6 +289,132 @@ select throws_ok(
      values ((select id from public.products where slug = 'musc-validation'), 'BYPASS-PRICE', 'Prix non revu', 1, 999999) $$,
   '42501', 'permission denied for table product_variants',
   'a seller cannot attach an unreviewed price or stock directly'
+);
+select throws_ok(
+  $$ insert into public.shops (owner_id, slug, name, status)
+     values ('10000000-0000-0000-0000-000000000001', 'boutique-auto-approuvee', 'Boutique auto-approuvée', 'approved') $$,
+  '42501', 'permission denied for table shops',
+  'a seller cannot self-approve a shop with a direct PostgREST-equivalent insert'
+);
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000002","role":"authenticated"}';
+select throws_ok(
+  $$ select public.submit_product_for_review((select id from public.products where slug = 'musc-validation')) $$,
+  '42501', 'product_ownership_required',
+  'an outsider cannot submit another shop product for review'
+);
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select lives_ok(
+  $$ select public.submit_shop_for_review((select id from public.shops where slug = 'atelier-test')) $$,
+  'a shop owner can submit a complete shop for review'
+);
+reset role;
+select results_eq(
+  $$ select status::text from public.shops where slug = 'atelier-test' $$,
+  $$ values ('under_review'::text) $$,
+  'shop submission enters the under-review state'
+);
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select throws_ok(
+  $$ update public.shops set description = 'Description changée après soumission.' where slug = 'atelier-test' $$,
+  '42501', 'permission denied for table shops',
+  'a seller cannot alter shop content while it is under review'
+);
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select lives_ok(
+  $$ select public.submit_product_for_review((select id from public.products where slug = 'musc-validation')) $$,
+  'a shop member can submit a complete product for review'
+);
+reset role;
+select results_eq(
+  $$ select status::text from public.products where slug = 'musc-validation' $$,
+  $$ values ('under_review'::text) $$,
+  'product submission enters the under-review state'
+);
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select throws_ok(
+  $$ select public.review_shop_submission((select id from public.shops where slug = 'atelier-test'), 'approved', 'Auto-approbation vendeur interdite.') $$,
+  '42501', 'operator_role_required',
+  'a seller cannot review their own shop'
+);
+select throws_ok(
+  $$ select public.review_product_submission(
+       (select id from public.products where slug = 'musc-validation'),
+       (select e.id from public.product_evidence e join public.products p on p.id = e.product_id where p.slug = 'musc-validation'),
+       'approved', 'Auto-approbation produit interdite.', 'Résumé public frauduleux interdit.'
+     ) $$,
+  '42501', 'operator_role_required',
+  'a seller cannot review their own product or evidence'
+);
+reset role;
+
+insert into auth.users (id, email, raw_user_meta_data)
+values ('10000000-0000-0000-0000-000000000003', 'operator-test@yaqeen.local', '{"display_name":"Operator Test"}');
+update public.profiles set role = 'operator' where id = '10000000-0000-0000-0000-000000000003';
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000003","role":"authenticated"}';
+select lives_ok(
+  $$ select public.review_shop_submission((select id from public.shops where slug = 'atelier-test'), 'approved', 'Identité et informations de la boutique contrôlées.') $$,
+  'an operator can approve a submitted shop'
+);
+reset role;
+select results_eq(
+  $$ select status::text from public.shops where slug = 'atelier-test' $$,
+  $$ values ('approved'::text) $$,
+  'operator decision activates the shop'
+);
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000003","role":"authenticated"}';
+select lives_ok(
+  $$ select public.review_product_submission(
+       (select id from public.products where slug = 'musc-validation'),
+       (select e.id from public.product_evidence e join public.products p on p.id = e.product_id where p.slug = 'musc-validation'),
+       'approved', 'Contenu, variante et preuve documentaire contrôlés.',
+       'Déclaration vendeur examinée par Yaqeen ; périmètre limité à la composition déclarée.'
+     ) $$,
+  'an operator can approve evidence and publish its product atomically'
+);
+reset role;
+select results_eq(
+  $$ select status::text, (published_at is not null) from public.products where slug = 'musc-validation' $$,
+  $$ values ('published'::text, true) $$,
+  'product publication records its state and publication time'
+);
+select results_eq(
+  $$ select e.status::text, e.reviewed_by from public.product_evidence e join public.products p on p.id = e.product_id where p.slug = 'musc-validation' $$,
+  $$ values ('approved'::text, '10000000-0000-0000-0000-000000000003'::uuid) $$,
+  'evidence approval is attributed to the operator'
+);
+select results_eq(
+  $$ select count(*)::bigint from public.moderation_decisions where reviewer_id = '10000000-0000-0000-0000-000000000003' $$,
+  $$ values (2::bigint) $$,
+  'shop and product decisions leave an immutable audit trail'
+);
+
+set local role anon;
+select results_eq(
+  $$ select count(*)::bigint from public.products where slug = 'musc-validation' $$,
+  $$ values (1::bigint) $$,
+  'anonymous storefront readers can see the legitimately published product'
+);
+select results_eq(
+  $$ select count(*)::bigint from public.product_evidence e join public.products p on p.id = e.product_id
+     where p.slug = 'musc-validation' and e.status = 'approved' and e.public_summary is not null $$,
+  $$ values (1::bigint) $$,
+  'anonymous storefront readers can see only the approved public evidence summary'
 );
 reset role;
 
