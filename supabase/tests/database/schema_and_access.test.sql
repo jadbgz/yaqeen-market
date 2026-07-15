@@ -44,9 +44,9 @@ select policies_are('public', 'product_evidence', array[
   'evidence_public_read', 'evidence_member_submit'
 ]);
 
-select has_index('public', 'products', 'products_shop_status_idx');
-select has_index('public', 'product_variants', 'variants_product_active_idx');
-select has_index('public', 'product_evidence', 'evidence_product_status_idx');
+select has_index('public', 'products', 'products_shop_status_idx', 'product review queries have a shop/status index');
+select has_index('public', 'product_variants', 'variants_product_active_idx', 'active variant queries have a product index');
+select has_index('public', 'product_evidence', 'evidence_product_status_idx', 'evidence review queries have a product/status index');
 
 select results_eq(
   $$ select has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE') $$,
@@ -74,8 +74,8 @@ select results_eq(
   'anonymous visitors cannot create products'
 );
 
-select col_not_null('public', 'product_variants', 'stock_on_hand');
-select col_not_null('public', 'product_variants', 'stock_reserved');
+select col_not_null('public', 'product_variants', 'stock_on_hand', 'physical stock cannot be null');
+select col_not_null('public', 'product_variants', 'stock_reserved', 'reserved stock cannot be null');
 
 select * from finish();
 rollback;
