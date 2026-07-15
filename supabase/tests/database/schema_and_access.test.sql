@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(43);
+select plan(51);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'shops', 'shops table exists');
@@ -35,13 +35,13 @@ select policies_are('public', 'shop_members', array[
   'shop_members_member_read', 'shop_members_owner_insert'
 ]);
 select policies_are('public', 'products', array[
-  'products_public_read', 'products_member_write'
+  'products_public_read'
 ]);
 select policies_are('public', 'product_variants', array[
-  'variants_public_read', 'variants_member_write'
+  'variants_public_read'
 ]);
 select policies_are('public', 'product_evidence', array[
-  'evidence_public_read', 'evidence_member_submit'
+  'evidence_public_read'
 ]);
 
 select has_index('public', 'products', 'products_shop_status_idx', 'product review queries have a shop/status index');
@@ -73,6 +73,31 @@ select results_eq(
   $$ select has_table_privilege('anon', 'public.products', 'INSERT') $$,
   $$ values (false) $$,
   'anonymous visitors cannot create products'
+);
+select results_eq(
+  $$ select has_table_privilege('authenticated', 'public.products', 'INSERT') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot bypass the product RPC with a direct insert'
+);
+select results_eq(
+  $$ select has_column_privilege('authenticated', 'public.products', 'title', 'UPDATE') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot alter a reviewed product directly'
+);
+select results_eq(
+  $$ select has_table_privilege('authenticated', 'public.product_variants', 'INSERT') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot attach an unreviewed variant directly'
+);
+select results_eq(
+  $$ select has_table_privilege('authenticated', 'public.product_variants', 'UPDATE') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot change reviewed price or stock directly'
+);
+select results_eq(
+  $$ select has_table_privilege('authenticated', 'public.product_evidence', 'INSERT') $$,
+  $$ values (false) $$,
+  'authenticated clients cannot approve evidence through a direct insert'
 );
 
 select col_not_null('public', 'product_variants', 'stock_on_hand', 'physical stock cannot be null');
@@ -202,6 +227,30 @@ select results_eq(
   $$ values (0::bigint) $$,
   'a refused transaction leaves no partial product behind'
 );
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select throws_ok(
+  $$ insert into public.products (shop_id, slug, title, category, status)
+     values ((select id from public.shops where slug = 'atelier-test'), 'auto-publie', 'Produit auto-publié', 'parfums', 'published') $$,
+  '42501', 'permission denied for table products',
+  'a seller cannot self-publish with a direct PostgREST-equivalent insert'
+);
+select throws_ok(
+  $$ insert into public.product_evidence (product_id, kind, status, scope, submitted_by, reviewed_by, reviewed_at)
+     values ((select id from public.products where slug = 'musc-validation'), 'seller_declaration', 'approved',
+       'Tentative de validation directe par le vendeur.',
+       '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', now()) $$,
+  '42501', 'permission denied for table product_evidence',
+  'a seller cannot self-approve evidence with a direct PostgREST-equivalent insert'
+);
+select throws_ok(
+  $$ insert into public.product_variants (product_id, sku, title, price_cents, stock_on_hand)
+     values ((select id from public.products where slug = 'musc-validation'), 'BYPASS-PRICE', 'Prix non revu', 1, 999999) $$,
+  '42501', 'permission denied for table product_variants',
+  'a seller cannot attach an unreviewed price or stock directly'
+);
+reset role;
 
 select * from finish();
 rollback;

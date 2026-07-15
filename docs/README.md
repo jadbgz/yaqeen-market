@@ -11,6 +11,7 @@ Ce dossier transforme le Plan Directeur v1.0 et le Playbook des 22 chantiers en 
 - `architecture/ADR-002-backend-supabase-postgres.md` : décision du socle PostgreSQL, Auth, migrations et RLS.
 - `architecture/ADR-003-secure-seller-onboarding.md` : frontière transactionnelle de création d'une boutique vendeur.
 - `architecture/ADR-004-atomic-product-draft.md` : création atomique du produit, de sa variante, de son stock et de sa preuve.
+- `architecture/ADR-005-rpc-only-catalog-writes.md` : fermeture des contournements PostgREST et écritures catalogue exclusivement par RPC.
 - `../ops/audits/technical-findings.csv` : registre exécutable des constats, priorités, chantiers et critères de sortie.
 - `chantiers/C1-validation-marche.md` : acquisition vendeurs et validation acheteurs.
 - `chantiers/C2-charte-et-moderation.md` : cadre religieux et preuves produit.

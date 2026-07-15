@@ -47,6 +47,8 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 
 ## Incohérences fonctionnelles
 
+- A-018 — auto-publication et auto-approbation par insert PostgREST direct : corrigé le 15 juillet ; grants et policies de mutation directe retirés sur produits, variantes et preuves, avec trois tests pgTAP reproduisant les attaques. Voir ADR-005.
+
 - A-006 — compteur panier de la home web : corrigé le 15 juillet, lien et quantité utilisent le `CartProvider` partagé.
 - A-007 — produits dupliqués : corrigé entre la home et le catalogue web ; la convergence avec Expo et la future API reste ouverte.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.

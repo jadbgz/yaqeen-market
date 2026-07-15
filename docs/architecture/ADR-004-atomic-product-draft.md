@@ -26,7 +26,7 @@ La fonction `create_product_draft` :
 - revalide les formats, bornes de prix et de stock et catégories côté base ;
 - exige l'organisme et la référence lorsqu'un vendeur déclare un certificat tiers.
 
-Le navigateur ne transmet pas le statut et l'action serveur déduit la boutique depuis la session. Les droits SQL existants empêchent toujours le vendeur de publier son produit ou d'approuver sa propre preuve.
+Le navigateur ne transmet pas le statut et l'action serveur déduit la boutique depuis la session. Depuis ADR-005, le rôle authentifié ne dispose d'aucun droit direct de mutation sur le catalogue : la fonction contrôlée est le seul chemin d'écriture.
 
 ## Sémantique de confiance
 
