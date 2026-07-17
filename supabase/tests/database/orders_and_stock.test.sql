@@ -251,7 +251,7 @@ select results_eq(
   'stock is reserved independently for the second seller'
 );
 select results_eq(
-  $$ select status::text, quantity from public.inventory_reservations r join public.orders o on o.id = r.order_id
+  $$ select r.status::text, r.quantity from public.inventory_reservations r join public.orders o on o.id = r.order_id
      where o.checkout_token = '24000000-0000-4000-8000-000000000001'
        and r.variant_id = '23000000-0000-4000-8000-000000000001' $$,
   $$ values ('active'::text, 2) $$,
@@ -411,7 +411,7 @@ select results_eq(
   'cancellation releases stock belonging to the second seller'
 );
 select results_eq(
-  $$ select status::text, released_at is not null from public.inventory_reservations r join public.orders o on o.id = r.order_id
+  $$ select r.status::text, r.released_at is not null from public.inventory_reservations r join public.orders o on o.id = r.order_id
      where o.checkout_token = '24000000-0000-4000-8000-000000000001' $$,
   $$ values ('released'::text, true) $$,
   'cancellation marks the reservation as released'
@@ -464,7 +464,7 @@ select results_eq(
   'expiration closes the overdue aggregate order'
 );
 select results_eq(
-  $$ select status::text, released_at is not null from public.inventory_reservations r join public.orders o on o.id = r.order_id
+  $$ select r.status::text, r.released_at is not null from public.inventory_reservations r join public.orders o on o.id = r.order_id
      where o.checkout_token = '24000000-0000-4000-8000-000000000004' $$,
   $$ values ('expired'::text, true) $$,
   'expiration marks the reservation and its release time'
