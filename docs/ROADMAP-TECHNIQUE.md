@@ -14,8 +14,9 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - écritures sensibles exclusivement par RPC métier ;
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
-- CI web, mobile et base, avec 142 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 199 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
+- architecture Stripe Connect décidée et registre pré-réseau livré pour comptes connectés, tentatives, transferts et webhooks dédupliqués.
 
 Le paiement, la commande et la livraison restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
 
@@ -34,6 +35,8 @@ Le paiement, la commande et la livraison restent volontairement indisponibles ta
 Critère de sortie : aucune lecture inter-boutiques, aucune transition de statut directe et aucun surbooking possible sous concurrence.
 
 ### 2. Paiement marketplace
+
+État : architecture Separate Charges and Transfers acceptée dans ADR-010 et registre persistant validé le 17 juillet 2026. Aucun SDK, endpoint, secret ou passage à `paid` n'est encore exposé.
 
 - documenter Stripe Connect Express dans un nouvel ADR ; `ADR-005` est déjà attribué à la fermeture des écritures catalogue directes ;
 - déléguer KYC/KYB, reversements et exigences de paiement à Stripe ;
@@ -113,11 +116,11 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Ordre d'exécution immédiat
 
-1. décision Stripe Connect dans un ADR dédié ;
-2. médias produits et leur modération ;
-3. adresses figées, récupération de mot de passe et premier lot de durcissement ;
-4. pagination et filtres SQL du catalogue ;
-5. branchement du checkout uniquement après validation des webhooks et de la réservation de stock.
+1. médias produits et leur modération ;
+2. adresses figées, récupération de mot de passe et premier lot de durcissement ;
+3. pagination et filtres SQL du catalogue ;
+4. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
+5. branchement du checkout uniquement après validation des webhooks et de la consommation du stock.
 
 ## Garde-fous permanents
 

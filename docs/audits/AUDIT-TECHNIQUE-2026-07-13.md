@@ -29,7 +29,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-003 — Checkout et paiement absents
 
 - Chantiers : C9, C10, C12, C16
-- État : partiel au 17 juillet ; agrégat client, sous-commandes vendeur, snapshots de prix, réservation atomique, annulation et expiration sont livrés. Le checkout simulé reste retiré et aucun rôle client/vendeur ne peut déclarer un paiement.
+- État : partiel au 17 juillet ; agrégat client, sous-commandes vendeur, snapshots de prix, réservation atomique, annulation et expiration sont livrés. Le registre Stripe Connect pré-réseau ajoute comptes connectés, tentatives idempotentes, transferts et webhooks dédupliqués. Le checkout simulé reste retiré et aucun rôle client/vendeur ne peut déclarer un paiement.
 - Risque : incapacité à encaisser, répartir et rembourser une commande multi-vendeurs.
 - Sortie attendue : décision Stripe Connect documentée, comptes connectés, ventilation par vendeur, webhooks idempotents, remboursements et reversements testés.
 
