@@ -60,20 +60,41 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+create or replace function public.can_read_product_media_object(requested_path text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.product_media pm
+    join public.products p on p.id = pm.product_id
+    join public.shops s on s.id = p.shop_id
+    where pm.storage_path = requested_path
+      and pm.status = 'approved'
+      and p.status = 'published'
+      and s.status = 'approved'
+  ) or exists (
+    select 1
+    from public.product_media pm
+    join public.products p on p.id = pm.product_id
+    join public.shops s on s.id = p.shop_id
+    left join public.shop_members sm on sm.shop_id = s.id and sm.user_id = (select auth.uid())
+    left join public.profiles viewer on viewer.id = (select auth.uid())
+    where pm.storage_path = requested_path
+      and (s.owner_id = (select auth.uid()) or sm.user_id is not null or viewer.role in ('operator', 'admin'))
+  );
+$$;
+
+revoke all on function public.can_read_product_media_object(text) from public;
+grant execute on function public.can_read_product_media_object(text) to anon, authenticated;
+
 create policy product_media_object_public_or_member_read on storage.objects
   for select to anon, authenticated using (
     bucket_id = 'product-media'
-    and exists (
-      select 1
-      from public.product_media pm
-      join public.products p on p.id = pm.product_id
-      join public.shops s on s.id = p.shop_id
-      where pm.storage_path = name
-        and (
-          (pm.status = 'approved' and p.status = 'published' and s.status = 'approved')
-          or public.is_shop_member(p.shop_id)
-        )
-    )
+    and public.can_read_product_media_object(name)
   );
 
 create policy product_media_object_operator_read on storage.objects
