@@ -29,7 +29,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-003 — Checkout et paiement absents
 
 - Chantiers : C9, C10, C12, C16
-- État : ouvert ; le checkout simulé mobile a été retiré le 17 juillet afin de ne pas créer une fausse capacité de commande.
+- État : partiel au 17 juillet ; agrégat client, sous-commandes vendeur, snapshots de prix, réservation atomique, annulation et expiration sont livrés. Le checkout simulé reste retiré et aucun rôle client/vendeur ne peut déclarer un paiement.
 - Risque : incapacité à encaisser, répartir et rembourser une commande multi-vendeurs.
 - Sortie attendue : décision Stripe Connect documentée, comptes connectés, ventilation par vendeur, webhooks idempotents, remboursements et reversements testés.
 
@@ -55,7 +55,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 - A-007 — produits dupliqués : corrigé le 17 juillet ; les sources statiques web et Expo sont supprimées et les deux clients appliquent le même contrat Supabase. Voir ADR-007 et ADR-008.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
 - A-009 — frais de port calculés au panier global : calcul fictif retiré du web ; règles et seuils persistés par vendeur restent ouverts.
-- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock disponible affiché et quantité bornée sur les clients web et mobile, réservation atomique et revalidation serveur au checkout restent ouvertes.
+- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock affiché et quantités bornées côté clients, réservation atomique idempotente et libération à l'annulation/expiration livrées. La consommation de réservation après webhook de paiement reste ouverte.
 
 ## Qualité, performance et accessibilité
 

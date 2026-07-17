@@ -14,13 +14,16 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - écritures sensibles exclusivement par RPC métier ;
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
-- CI web, mobile et base, avec 77 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 142 assertions pgTAP incluant des scénarios d'attaque.
+- noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 
 Le paiement, la commande et la livraison restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
 
 ## Phase 1 — Réaliser une vente de bout en bout
 
 ### 1. Domaine commande et stock
+
+État : noyau pré-paiement livré le 17 juillet 2026. Les tables, RLS, RPC de réservation/annulation, worker d'expiration et 65 assertions dédiées sont opérationnels. Les transitions post-paiement restent volontairement fermées.
 
 - modéliser la commande client, les sous-commandes par boutique et les lignes au prix figé ;
 - définir une machine à états fermée pour paiement, préparation, expédition, livraison, annulation et remboursement ;
@@ -110,11 +113,11 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Ordre d'exécution immédiat
 
-1. schéma de commande, machine à états, RLS et tests d'attaque ;
-2. décision Stripe Connect dans un ADR dédié ;
-3. médias produits et leur modération ;
-4. récupération de mot de passe et premier lot de durcissement ;
-5. pagination et filtres SQL du catalogue.
+1. décision Stripe Connect dans un ADR dédié ;
+2. médias produits et leur modération ;
+3. adresses figées, récupération de mot de passe et premier lot de durcissement ;
+4. pagination et filtres SQL du catalogue ;
+5. branchement du checkout uniquement après validation des webhooks et de la réservation de stock.
 
 ## Garde-fous permanents
 
