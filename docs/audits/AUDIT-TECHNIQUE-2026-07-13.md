@@ -8,7 +8,7 @@ Cet audit est conservé publiquement pour documenter la dette technique et les c
 
 ## État après premières corrections
 
-Certains constats de l'audit initial ont déjà été traités dans l'application mobile Expo : recherche interactive, fiches produit navigables, favoris locaux, quantités, suppression, panier regroupé par boutique, checkout de démonstration, navigation compte/panier et affichage de contrôles produit. Ces corrections restent locales au prototype et ne remplacent ni une API, ni une base de données, ni une preuve réglementaire réelle.
+Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, partage le contrat de publication du web, expose la preuve revue et borne les quantités au stock annoncé. Les fixtures et le checkout de démonstration ont été supprimés ; commande, paiement et réservation atomique restent volontairement indisponibles.
 
 ## Constats critiques
 
@@ -29,7 +29,7 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 ### A-003 — Checkout et paiement absents
 
 - Chantiers : C9, C10, C12, C16
-- État : ouvert ; checkout simulé disponible sur mobile.
+- État : ouvert ; le checkout simulé mobile a été retiré le 17 juillet afin de ne pas créer une fausse capacité de commande.
 - Risque : incapacité à encaisser, répartir et rembourser une commande multi-vendeurs.
 - Sortie attendue : décision Stripe Connect documentée, comptes connectés, ventilation par vendeur, webhooks idempotents, remboursements et reversements testés.
 
@@ -52,10 +52,10 @@ Certains constats de l'audit initial ont déjà été traités dans l'applicatio
 - A-020 — storefront déconnecté de PostgreSQL : corrigé le 15 juillet ; home, catalogue et fiche utilisent uniquement les produits publiés avec boutique et preuve approuvées. Fixtures web supprimées. Voir ADR-007.
 
 - A-006 — compteur panier de la home web : corrigé le 15 juillet, lien et quantité utilisent le `CartProvider` partagé.
-- A-007 — produits dupliqués : corrigé sur le web, dont la source statique est supprimée ; la convergence Expo reste ouverte.
+- A-007 — produits dupliqués : corrigé le 17 juillet ; les sources statiques web et Expo sont supprimées et les deux clients appliquent le même contrat Supabase. Voir ADR-007 et ADR-008.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
 - A-009 — frais de port calculés au panier global : calcul fictif retiré du web ; règles et seuils persistés par vendeur restent ouverts.
-- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock disponible affiché et quantité bornée sur la fiche web, réservation atomique et revalidation serveur au checkout restent ouvertes.
+- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock disponible affiché et quantité bornée sur les clients web et mobile, réservation atomique et revalidation serveur au checkout restent ouvertes.
 
 ## Qualité, performance et accessibilité
 
