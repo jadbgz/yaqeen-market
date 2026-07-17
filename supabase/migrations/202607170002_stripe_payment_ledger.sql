@@ -136,6 +136,7 @@ create policy stripe_webhook_events_operator_read on public.stripe_webhook_event
   for select to authenticated using (public.is_operator());
 
 grant select on public.shop_payment_accounts, public.payment_attempts, public.payment_transfers, public.stripe_webhook_events to authenticated;
+grant select on public.shop_payment_accounts, public.payment_attempts, public.payment_transfers, public.stripe_webhook_events to service_role;
 
 create or replace function public.sync_stripe_payment_account(
   requested_shop_id uuid,
