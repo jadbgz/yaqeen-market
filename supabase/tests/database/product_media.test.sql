@@ -139,6 +139,7 @@ select results_eq($$ select count(*)::bigint from public.product_media where pro
 reset role;
 
 set local role anon;
+set local "request.jwt.claims" = '{"role":"anon"}';
 select results_eq($$ select count(*)::bigint from public.product_media where product_id = '32000000-0000-0000-0000-000000000001' $$, $$ values (0::bigint) $$, 'anonymous visitors cannot read pending media metadata');
 reset role;
 
@@ -162,6 +163,7 @@ select lives_ok(
 reset role;
 
 set local role anon;
+set local "request.jwt.claims" = '{"role":"anon"}';
 select results_eq($$ select count(*)::bigint from storage.objects where bucket_id = 'product-media' $$, $$ values (0::bigint) $$, 'anonymous visitors cannot read a pending storage object');
 reset role;
 
@@ -199,6 +201,7 @@ select results_eq(
 );
 
 set local role anon;
+set local "request.jwt.claims" = '{"role":"anon"}';
 select results_eq($$ select count(*)::bigint from public.product_media where product_id = '32000000-0000-0000-0000-000000000001' $$, $$ values (1::bigint) $$, 'anonymous storefronts can read approved media metadata');
 select results_eq($$ select count(*)::bigint from storage.objects where bucket_id = 'product-media' $$, $$ values (1::bigint) $$, 'anonymous storefronts can sign and retrieve the approved private object');
 select results_eq($$ select count(*)::bigint from public.products where id = '32000000-0000-0000-0000-000000000001' $$, $$ values (1::bigint) $$, 'the media-backed published product remains in the public catalog');
