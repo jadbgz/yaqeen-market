@@ -198,13 +198,16 @@ begin
     raise exception using errcode = '42501', message = 'authentication_required';
   end if;
 
-  select pm, p.shop_id into target_media, target_shop_id
+  select pm.* into target_media
   from public.product_media pm
-  join public.products p on p.id = pm.product_id
   where pm.id = requested_media_id
-  for update of pm;
+  for update;
 
-  if not found or not public.is_shop_member(target_shop_id) then
+  if not found then
+    raise exception using errcode = '42501', message = 'product_media_ownership_required';
+  end if;
+  select p.shop_id into target_shop_id from public.products p where p.id = target_media.product_id;
+  if not public.is_shop_member(target_shop_id) then
     raise exception using errcode = '42501', message = 'product_media_ownership_required';
   end if;
   if target_media.status not in ('pending', 'rejected') then
