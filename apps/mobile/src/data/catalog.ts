@@ -189,7 +189,10 @@ export async function loadPublishedProducts(signal?: AbortSignal): Promise<Produ
       ? await storageClient.storage.from('product-media').createSignedUrls(paths, 3600)
       : { data: [], error: null };
     if (signedError) throw new Error(`catalog_media_signing_failed:${signedError.message}`);
-    const signedByPath = new Map((signed ?? []).filter((item) => item.signedUrl).map((item) => [item.path, item.signedUrl]));
+    const signedByPath = new Map<string, string>();
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+    }
     return rows.map((row) => mapRow(row, signedByPath)).filter((product): product is Product => product !== null);
   } finally {
     clearTimeout(timeout);
