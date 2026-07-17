@@ -4,6 +4,7 @@ Les informations commerciales, le pipeline de prospection, les hypothèses de pr
 
 ## Documents de référence
 
+- `ROADMAP-TECHNIQUE.md` : séquence publique expurgée vers une première commande réelle, puis le niveau de service d'une grande marketplace.
 - `audits/AUDIT-TECHNIQUE-2026-07-13.md` : dette produit et critères de remédiation issus de l'audit technique.
 - `architecture/ADR-007-public-catalog-read-model.md` : source de vérité et critères d'affichage du storefront public.
 - `architecture/ADR-008-universal-public-catalog.md` : convergence Expo iOS/Android/web vers le même catalogue public.
@@ -13,4 +14,5 @@ Les informations commerciales, le pipeline de prospection, les hypothèses de pr
 - `architecture/ADR-004-atomic-product-draft.md` : création atomique du produit, de sa variante, de son stock et de sa preuve.
 - `architecture/ADR-005-rpc-only-catalog-writes.md` : fermeture des contournements PostgREST et écritures catalogue exclusivement par RPC.
 - `architecture/ADR-006-moderation-state-machine.md` : transitions vendeur/opérateur, publication atomique et journal des décisions.
+
 Les ADR décrivent l'état du système au moment de leur adoption. Ils ne constituent ni une promesse commerciale ni une certification de conformité.

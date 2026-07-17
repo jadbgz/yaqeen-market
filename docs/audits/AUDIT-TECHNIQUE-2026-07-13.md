@@ -2,7 +2,7 @@
 
 ## Verdict
 
-Le projet possède une direction artistique cohérente et des parcours front-end démontrables. Depuis le 15 juillet, l'identité, le catalogue vendeur, la modération et le storefront web reposent sur PostgreSQL ; le paiement multi-vendeurs, la logistique, les images et la convergence mobile restent à construire.
+Le projet possède une direction artistique cohérente et des parcours front-end démontrables. Depuis le 17 juillet, l'identité, le catalogue vendeur, la modération et les storefronts web et mobile reposent sur PostgreSQL ; le paiement multi-vendeurs, la logistique et les images restent à construire.
 
 Cet audit est conservé publiquement pour documenter la dette technique et les corrections. La matrice de pilotage détaillée est tenue dans le dépôt privé Yaqeen.
 
@@ -63,16 +63,18 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 - A-012 — textes inférieurs à 11–12 px : C18, ouvert ; audit WCAG et échelle typographique accessible.
 - A-013 — favoris, étoiles et contrôles non sémantiques : partiel ; favoris et avis fictifs retirés du storefront, audit clavier et lecteur d'écran restant.
 - A-014 — feuille CSS monolithique : C4, ouvert ; styles découpés par surface ou composant.
-- A-015 — absence de tests et de CI : C4, C16, partiellement traité ; workflow web/mobile créé, premier run distant et protection de branche encore requis.
+- A-015 — absence de tests et de CI : C4, C16, partiellement traité ; CI distante web/mobile/base active et verte. La protection de branche et les tests E2E restent requis.
 - A-016 — SEO incomplet : C14, partiel ; métadonnées dynamiques, canonical, OpenGraph et données structurées Product livrés. Sitemap, robots public et images sociales restent ouverts.
 - A-017 — dépendance transitive PostCSS : sous surveillance au 15 juillet ; `npm audit` signale deux vulnérabilités modérées via Next.js 16.2.10. Aucun risque élevé/critique. Le correctif automatique proposé rétrograde vers Next.js 9 et ne doit pas être appliqué ; mise à niveau dès publication d'une version Next.js corrigée compatible.
 
 ## Ordre de traitement recommandé
 
-1. C4 : socle, CI et choix de la source de vérité.
-2. C5/C6 : identités, rôles, catalogue, stock et modèle de preuve.
-3. C11/C7 : Seller Center et back-office de modération.
-4. C9/C10/C12 : commande multi-vendeurs, livraison et paiement.
-5. C13/C14/C16/C18 : confiance, SEO, sécurité, performance et accessibilité avant ouverture.
+1. C9/C10/C12 : commande multi-vendeurs, réservation de stock, paiement et livraison.
+2. C6/C11 : médias produits, édition du catalogue et expiration des preuves.
+3. C5 : récupération, suppression de compte et adresses client.
+4. C14/C16/C18 : recherche paginée, SEO, sécurité, performance et accessibilité.
+5. C13 : avis vérifiés, pages boutiques, retours et matérialisation publique de la confiance.
 
 Les commandes et paiements doivent rester explicitement désactivés jusqu'à leur branchement réel. Aucun chiffre commercial, avis, frais de livraison ou garantie de paiement ne doit être simulé.
+
+La séquence à jour et ses critères de sortie sont maintenus dans `docs/ROADMAP-TECHNIQUE.md`.
