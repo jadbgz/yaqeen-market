@@ -34,6 +34,20 @@ export type SellerProduct = {
     availableStock: number;
   } | null;
   evidenceStatus: "pending" | "approved" | "rejected" | "expired" | "revoked" | null;
+  mediaCount: number;
+};
+
+export type SellerProductMedia = {
+  id: string;
+  productId: string;
+  position: number;
+  altText: string;
+  status: "pending" | "approved" | "rejected";
+  width: number;
+  height: number;
+  byteSize: number;
+  storagePath: string;
+  signedUrl: string | null;
 };
 
 export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null> => {
@@ -124,7 +138,7 @@ export const getSellerProducts = cache(async (): Promise<SellerProduct[] | null>
   const rows = products ?? [];
   if (rows.length === 0) return [];
   const productIds = rows.map((product) => product.id);
-  const [{ data: variants }, { data: evidence }] = await Promise.all([
+  const [{ data: variants }, { data: evidence }, { data: media }] = await Promise.all([
     supabase
       .from("product_variants")
       .select("product_id, sku, title, price_cents, currency, stock_on_hand, stock_reserved")
@@ -136,6 +150,11 @@ export const getSellerProducts = cache(async (): Promise<SellerProduct[] | null>
       .select("product_id, status, created_at")
       .in("product_id", productIds)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("product_media")
+      .select("product_id")
+      .in("product_id", productIds)
+      .in("status", ["pending", "approved"]),
   ]);
 
   return rows.map((product) => {
@@ -156,6 +175,44 @@ export const getSellerProducts = cache(async (): Promise<SellerProduct[] | null>
         availableStock: Math.max(0, variant.stock_on_hand - variant.stock_reserved),
       } : null,
       evidenceStatus: proof?.status ?? null,
+      mediaCount: media?.filter((item) => item.product_id === product.id).length ?? 0,
     };
   });
+});
+
+export const getSellerProductMedia = cache(async (productId: string): Promise<SellerProductMedia[] | null> => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+  const supabase = await createClient();
+  const { data: product } = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", productId)
+    .eq("shop_id", dashboard.shop.id)
+    .maybeSingle();
+  if (!product) return null;
+
+  const { data } = await supabase
+    .from("product_media")
+    .select("id, product_id, position, alt_text, status, width, height, byte_size, storage_path")
+    .eq("product_id", productId)
+    .order("position");
+  const rows = data ?? [];
+  const { data: signed } = rows.length
+    ? await supabase.storage.from("product-media").createSignedUrls(rows.map((item) => item.storage_path), 600)
+    : { data: [] };
+  const signedByPath = new Map((signed ?? []).map((item) => [item.path, item.signedUrl]));
+
+  return rows.map((item) => ({
+    id: item.id,
+    productId: item.product_id,
+    position: item.position,
+    altText: item.alt_text,
+    status: item.status,
+    width: item.width,
+    height: item.height,
+    byteSize: item.byte_size,
+    storagePath: item.storage_path,
+    signedUrl: signedByPath.get(item.storage_path) ?? null,
+  }));
 });

@@ -14,7 +14,7 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - écritures sensibles exclusivement par RPC métier ;
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
-- CI web, mobile et base, avec 199 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 247 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - architecture Stripe Connect décidée et registre pré-réseau livré pour comptes connectés, tentatives, transferts et webhooks dédupliqués.
 
@@ -49,11 +49,14 @@ Critère de sortie : une commande de test payée, ventilée, remboursable et rap
 
 ### 3. Médias produits
 
-- stocker de une à six images par produit avec ordre et texte alternatif ;
-- contrôler type, taille, dimensions et propriétaire côté serveur ;
-- soumettre les médias au même workflow de modération que la fiche ;
-- générer des formats responsive AVIF/WebP ;
-- convertir le héros actif et supprimer les actifs inutilisés.
+État : socle web/mobile livré le 17 juillet 2026. Le bucket privé, la normalisation WebP, la galerie vendeur, la revue opérateur atomique, les URL signées et le contrat catalogue universel sont opérationnels. Le recadrage, la réorganisation et la rétention automatique des rejets restent ouverts.
+
+- [x] stocker de une à six images par produit avec ordre et texte alternatif ;
+- [x] contrôler contenu décodable, type, taille, dimensions et propriétaire côté serveur ;
+- [x] soumettre les médias au même workflow de modération que la fiche ;
+- [x] normaliser les fichiers produit en WebP et les diffuser par URL signée ;
+- [x] convertir le héros actif en AVIF et supprimer les actifs inutilisés ;
+- [ ] ajouter recadrage, réorganisation et purge automatique des médias rejetés.
 
 Critère de sortie : aucun produit publiable sans média approuvé, accessible et optimisé.
 
@@ -116,9 +119,9 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Ordre d'exécution immédiat
 
-1. médias produits et leur modération ;
-2. adresses figées, récupération de mot de passe et premier lot de durcissement ;
-3. pagination et filtres SQL du catalogue ;
+1. adresses figées, récupération de mot de passe et premier lot de durcissement ;
+2. pagination, recherche et filtres SQL du catalogue ;
+3. édition des fiches, variantes multiples et expiration des preuves ;
 4. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
 5. branchement du checkout uniquement après validation des webhooks et de la consommation du stock.
 

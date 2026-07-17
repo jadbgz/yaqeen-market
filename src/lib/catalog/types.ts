@@ -8,6 +8,14 @@ export type PublicEvidence = {
   publicSummary: string;
 };
 
+export type PublicMedia = {
+  url: string;
+  altText: string;
+  width: number;
+  height: number;
+  position: number;
+};
+
 export type PublicProduct = {
   id: string;
   slug: string;
@@ -25,6 +33,7 @@ export type PublicProduct = {
   color: string;
   shape: string;
   evidence: PublicEvidence;
+  media: PublicMedia[];
   publishedAt: string | null;
 };
 

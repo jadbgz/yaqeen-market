@@ -31,7 +31,7 @@ export default async function Home() {
       </header>
 
       <section className="relative min-h-[750px] border-b border-white/15 bg-[#092b5d] text-[#f2eadc] lg:min-h-[810px]">
-        <Image src="/yaqeen-architectural-hero.png" alt="Composition architecturale Yaqeen" fill priority className="object-cover object-[66%_center]" sizes="100vw" />
+        <Image src="/yaqeen-architectural-hero.avif" alt="Composition architecturale Yaqeen" fill priority className="object-cover object-[66%_center]" sizes="100vw" />
         <div className="hero-shade absolute inset-0" />
         <div className="relative mx-auto flex min-h-[750px] max-w-[1440px] items-end px-5 pb-16 pt-28 md:px-10 lg:min-h-[810px] lg:items-center lg:pb-0">
           <div className="max-w-[650px]">
@@ -55,7 +55,7 @@ export default async function Home() {
         <div className="mx-auto max-w-[1440px]">
           <div className="mb-14 flex items-end justify-between"><div><p className="index-label">02 / Dernières publications</p><h2 className="display-head mt-5 text-[clamp(3rem,6vw,6rem)] tracking-[-.07em]">À DÉCOUVRIR</h2></div><Link href="/catalogue" className="hidden text-xs sm:block">Voir tout le catalogue ↗</Link></div>
           <div className="grid border-l border-t border-[#24231f]/15 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product,index) => <Link href={productHref(product)} key={product.id} className="product-card border-b border-r border-[#24231f]/15 p-4"><div className="flex items-center justify-between text-[9px] uppercase tracking-[.18em]"><span>{String(index+1).padStart(2,"0")}</span><span aria-hidden="true">↗</span></div><div className="object-stage"><div className={`object-form ${product.shape}`}><span>{product.shape === "book" ? "اقرأ" : "Y"}</span></div></div><div className="border-t border-[#24231f]/15 pt-4"><p className="text-[9px] uppercase tracking-[.16em] text-[#77736a]">{product.shop} · preuve revue</p><div className="mt-2 flex items-start justify-between gap-4"><h3 className="text-lg font-bold tracking-[-.04em]">{product.name}</h3><span className="shrink-0 text-xs">{formatPrice(product.price,product.currency)}</span></div></div></Link>)}
+            {products.map((product,index) => <Link href={productHref(product)} key={product.id} className="product-card border-b border-r border-[#24231f]/15 p-4"><div className="flex items-center justify-between text-[9px] uppercase tracking-[.18em]"><span>{String(index+1).padStart(2,"0")}</span><span aria-hidden="true">↗</span></div><div className="object-stage product-photo"><Image src={product.media[0].url} alt={product.media[0].altText} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" unoptimized/></div><div className="border-t border-[#24231f]/15 pt-4"><p className="text-[9px] uppercase tracking-[.16em] text-[#77736a]">{product.shop} · preuve & image revues</p><div className="mt-2 flex items-start justify-between gap-4"><h3 className="text-lg font-bold tracking-[-.04em]">{product.name}</h3><span className="shrink-0 text-xs">{formatPrice(product.price,product.currency)}</span></div></div></Link>)}
             {products.length===0&&<div className="col-span-full border-b border-r border-[#24231f]/15 px-6 py-16"><p className="max-w-xl text-lg">Les premiers produits apparaîtront ici après la revue de leur boutique et de leur preuve.</p><Link href="/seller" className="mt-6 inline-block text-xs underline underline-offset-8">Ouvrir une boutique vérifiée →</Link></div>}
           </div>
         </div>

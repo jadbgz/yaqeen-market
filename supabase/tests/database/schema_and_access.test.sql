@@ -222,6 +222,21 @@ select results_eq(
   'first evidence remains pending and is attributed to its submitter'
 );
 
+insert into public.product_media (
+  id, product_id, storage_path, position, alt_text, mime_type, byte_size, width, height, submitted_by
+)
+select
+  '15000000-0000-0000-0000-000000000001', p.id,
+  p.id::text || '/15000000-0000-0000-0000-000000000001.webp', 1,
+  'Flacon de musc vu de face sur un fond clair', 'image/webp', 120000, 1200, 1500,
+  '10000000-0000-0000-0000-000000000001'
+from public.products p where p.slug = 'musc-validation';
+
+insert into storage.objects (bucket_id, name, owner_id, metadata)
+select 'product-media', pm.storage_path, '10000000-0000-0000-0000-000000000001',
+  '{"mimetype":"image/webp","size":120000}'::jsonb
+from public.product_media pm where pm.id = '15000000-0000-0000-0000-000000000001';
+
 insert into auth.users (id, email, raw_user_meta_data)
 values ('10000000-0000-0000-0000-000000000002', 'outsider-test@yaqeen.local', '{"display_name":"Outsider Test"}');
 set local role authenticated;
@@ -400,8 +415,8 @@ select results_eq(
 );
 select results_eq(
   $$ select count(*)::bigint from public.moderation_decisions where reviewer_id = '10000000-0000-0000-0000-000000000003' $$,
-  $$ values (2::bigint) $$,
-  'shop and product decisions leave an immutable audit trail'
+  $$ values (3::bigint) $$,
+  'shop, product and product-media decisions leave an immutable audit trail'
 );
 
 set local role anon;

@@ -34,6 +34,14 @@ type PublicCatalogRow = {
     valid_until: string | null;
     public_summary: string | null;
   }>;
+  product_media: Array<{
+    storage_path: string;
+    status: string;
+    position: number;
+    alt_text: string;
+    width: number;
+    height: number;
+  }>;
 };
 
 const visualByCategory: Record<string, { color: string; shape: string }> = {
@@ -46,7 +54,7 @@ const visualByCategory: Record<string, { color: string; shape: string }> = {
   maison: { color: "#d09b47", shape: "box" },
 };
 
-function toPublicProduct(row: PublicCatalogRow): PublicProduct | null {
+function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string>): PublicProduct | null {
   const shop = row.shops;
   const variant = row.product_variants
     .filter((item) => item.active && item.price_cents > 0)
@@ -54,8 +62,11 @@ function toPublicProduct(row: PublicCatalogRow): PublicProduct | null {
   const evidence = row.product_evidence.find(
     (item) => item.status === "approved" && item.public_summary,
   );
+  const media = row.product_media
+    .filter((item) => item.status === "approved" && signedByPath.has(item.storage_path))
+    .sort((a, b) => a.position - b.position);
 
-  if (!shop || shop.status !== "approved" || !variant || !evidence?.public_summary) return null;
+  if (!shop || shop.status !== "approved" || !variant || !evidence?.public_summary || media.length === 0) return null;
 
   const visual = visualByCategory[row.category] ?? { color: "#49645b", shape: "box" };
   return {
@@ -83,6 +94,13 @@ function toPublicProduct(row: PublicCatalogRow): PublicProduct | null {
       validUntil: evidence.valid_until,
       publicSummary: evidence.public_summary,
     },
+    media: media.map((item) => ({
+      url: signedByPath.get(item.storage_path)!,
+      altText: item.alt_text,
+      width: item.width,
+      height: item.height,
+      position: item.position,
+    })),
     publishedAt: row.published_at,
   };
 }
@@ -101,6 +119,7 @@ async function queryPublishedProducts(): Promise<PublicProduct[]> {
       shops!inner(slug, name, status),
       product_variants(id, title, price_cents, currency, stock_on_hand, stock_reserved, active),
       product_evidence(kind, status, issuer_name, reference_number, scope, valid_from, valid_until, public_summary)
+      ,product_media(storage_path, status, position, alt_text, width, height)
     `)
     .eq("status", "published")
     .eq("shops.status", "approved")
@@ -113,8 +132,22 @@ async function queryPublishedProducts(): Promise<PublicProduct[]> {
     return [];
   }
 
-  return ((data ?? []) as unknown as PublicCatalogRow[])
-    .map(toPublicProduct)
+  const rows = (data ?? []) as unknown as PublicCatalogRow[];
+  const paths = rows.flatMap((row) => row.product_media.filter((item) => item.status === "approved").map((item) => item.storage_path));
+  const { data: signed, error: signError } = paths.length
+    ? await supabase.storage.from("product-media").createSignedUrls(paths, 3600)
+    : { data: [], error: null };
+  if (signError) {
+    console.error("Unable to sign public product media", signError.message);
+    return [];
+  }
+  const signedByPath = new Map<string, string>();
+  for (const item of signed ?? []) {
+    if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+  }
+
+  return rows
+    .map((row) => toPublicProduct(row, signedByPath))
     .filter((product): product is PublicProduct => product !== null);
 }
 

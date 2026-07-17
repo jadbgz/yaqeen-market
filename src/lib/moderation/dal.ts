@@ -14,6 +14,7 @@ export type ModerationQueue = {
     shopName: string;
     evidence: { id: string; kind: string; scope: string; issuerName: string | null; referenceNumber: string | null; proposedSummary: string | null } | null;
     variant: { title: string; sku: string; priceCents: number; stock: number } | null;
+    media: Array<{ id: string; position: number; altText: string; width: number; height: number; byteSize: number; signedUrl: string | null }>;
   }>;
 };
 
@@ -30,11 +31,17 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
   const productRows = products ?? [];
   const productIds = productRows.map((product) => product.id);
   const shopIds = [...new Set(productRows.map((product) => product.shop_id))];
-  const [{ data: productShops }, { data: evidence }, { data: variants }] = await Promise.all([
+  const [{ data: productShops }, { data: evidence }, { data: variants }, { data: media }] = await Promise.all([
     shopIds.length ? supabase.from("shops").select("id, name").in("id", shopIds) : Promise.resolve({ data: [] }),
     productIds.length ? supabase.from("product_evidence").select("id, product_id, kind, scope, issuer_name, reference_number, public_summary").in("product_id", productIds).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
     productIds.length ? supabase.from("product_variants").select("product_id, title, sku, price_cents, stock_on_hand").in("product_id", productIds).eq("active", true).order("created_at") : Promise.resolve({ data: [] }),
+    productIds.length ? supabase.from("product_media").select("id, product_id, position, alt_text, width, height, byte_size, storage_path").in("product_id", productIds).eq("status", "pending").order("position") : Promise.resolve({ data: [] }),
   ]);
+  const mediaRows = media ?? [];
+  const { data: signedMedia } = mediaRows.length
+    ? await supabase.storage.from("product-media").createSignedUrls(mediaRows.map((item) => item.storage_path), 600)
+    : { data: [] };
+  const signedByPath = new Map((signedMedia ?? []).map((item) => [item.path, item.signedUrl]));
 
   return {
     shops: (shops ?? []).map((shop) => ({ id: shop.id, name: shop.name, slug: shop.slug, description: shop.description, country: shop.ships_from_country })),
@@ -49,6 +56,15 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
         shopName: productShops?.find((shop) => shop.id === product.shop_id)?.name ?? "Boutique inconnue",
         evidence: proof ? { id: proof.id, kind: proof.kind, scope: proof.scope, issuerName: proof.issuer_name, referenceNumber: proof.reference_number, proposedSummary: proof.public_summary } : null,
         variant: variant ? { title: variant.title, sku: variant.sku, priceCents: variant.price_cents, stock: variant.stock_on_hand } : null,
+        media: mediaRows.filter((item) => item.product_id === product.id).map((item) => ({
+          id: item.id,
+          position: item.position,
+          altText: item.alt_text,
+          width: item.width,
+          height: item.height,
+          byteSize: item.byte_size,
+          signedUrl: signedByPath.get(item.storage_path) ?? null,
+        })),
       };
     }),
   };

@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 export type PublicEvidence = {
   kind: string;
   issuerName: string | null;
@@ -21,6 +23,7 @@ export type Product = {
   stock: number;
   verificationSummary: string;
   evidence: PublicEvidence;
+  media: { url: string; altText: string; width: number; height: number; position: number }[];
   publishedAt: string | null;
 };
 
@@ -48,6 +51,14 @@ type CatalogRow = {
     reference_number: string | null;
     scope: string;
     public_summary: string | null;
+  }[];
+  product_media: {
+    storage_path: string;
+    status: string;
+    position: number;
+    alt_text: string;
+    width: number;
+    height: number;
   }[];
 };
 
@@ -89,9 +100,10 @@ const publicSelect = [
   'shops!inner(slug,name,status)',
   'product_variants(id,title,price_cents,currency,stock_on_hand,stock_reserved,active)',
   'product_evidence(kind,status,issuer_name,reference_number,scope,public_summary)',
+  'product_media(storage_path,status,position,alt_text,width,height)',
 ].join(',');
 
-function mapRow(row: CatalogRow): Product | null {
+function mapRow(row: CatalogRow, signedByPath: Map<string, string>): Product | null {
   const shop = row.shops;
   const variant = row.product_variants
     .filter((item) => item.active && item.price_cents > 0)
@@ -99,8 +111,11 @@ function mapRow(row: CatalogRow): Product | null {
   const evidence = row.product_evidence.find(
     (item) => item.status === 'approved' && item.public_summary,
   );
+  const media = row.product_media
+    .filter((item) => item.status === 'approved' && signedByPath.has(item.storage_path))
+    .sort((a, b) => a.position - b.position);
 
-  if (!shop || shop.status !== 'approved' || !variant || !evidence?.public_summary) return null;
+  if (!shop || shop.status !== 'approved' || !variant || !evidence?.public_summary || media.length === 0) return null;
 
   return {
     id: row.id,
@@ -123,6 +138,13 @@ function mapRow(row: CatalogRow): Product | null {
       scope: evidence.scope,
       publicSummary: evidence.public_summary,
     },
+    media: media.map((item) => ({
+      url: signedByPath.get(item.storage_path)!,
+      altText: item.alt_text,
+      width: item.width,
+      height: item.height,
+      position: item.position,
+    })),
     publishedAt: row.published_at,
   };
 }
@@ -160,7 +182,15 @@ export async function loadPublishedProducts(signal?: AbortSignal): Promise<Produ
 
     const payload: unknown = await response.json();
     if (!Array.isArray(payload)) throw new Error('catalog_response_invalid');
-    return (payload as CatalogRow[]).map(mapRow).filter((product): product is Product => product !== null);
+    const rows = payload as CatalogRow[];
+    const paths = rows.flatMap((row) => row.product_media.filter((item) => item.status === 'approved').map((item) => item.storage_path));
+    const storageClient = createClient(baseUrl, publishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    const { data: signed, error: signedError } = paths.length
+      ? await storageClient.storage.from('product-media').createSignedUrls(paths, 3600)
+      : { data: [], error: null };
+    if (signedError) throw new Error(`catalog_media_signing_failed:${signedError.message}`);
+    const signedByPath = new Map((signed ?? []).filter((item) => item.signedUrl).map((item) => [item.path, item.signedUrl]));
+    return rows.map((row) => mapRow(row, signedByPath)).filter((product): product is Product => product !== null);
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abortRequest);

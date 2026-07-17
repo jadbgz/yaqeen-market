@@ -59,7 +59,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 
 ## Qualité, performance et accessibilité
 
-- A-011 — médias lourds et actifs inutilisés : C14, ouvert ; budget d'image, AVIF/WebP et nettoyage des actifs.
+- A-011 — médias lourds et actifs inutilisés : C14, traité pour le héros et les produits ; héros actif réduit d’environ 2,7 Mio à environ 146 Kio en AVIF, actif botanique et SVG par défaut supprimés, médias vendeur normalisés en WebP borné.
 - A-012 — textes inférieurs à 11–12 px : C18, ouvert ; audit WCAG et échelle typographique accessible.
 - A-013 — favoris, étoiles et contrôles non sémantiques : partiel ; favoris et avis fictifs retirés du storefront, audit clavier et lecteur d'écran restant.
 - A-014 — feuille CSS monolithique : C4, ouvert ; styles découpés par surface ou composant.
