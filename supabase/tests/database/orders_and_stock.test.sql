@@ -411,10 +411,11 @@ select results_eq(
   'cancellation releases stock belonging to the second seller'
 );
 select results_eq(
-  $$ select r.status::text, r.released_at is not null from public.inventory_reservations r join public.orders o on o.id = r.order_id
-     where o.checkout_token = '24000000-0000-4000-8000-000000000001' $$,
-  $$ values ('released'::text, true) $$,
-  'cancellation marks the reservation as released'
+  $$ select count(*)::bigint from public.inventory_reservations r join public.orders o on o.id = r.order_id
+     where o.checkout_token = '24000000-0000-4000-8000-000000000001'
+       and r.status = 'released' and r.released_at is not null $$,
+  $$ values (2::bigint) $$,
+  'cancellation marks every seller reservation as released'
 );
 select results_eq(
   $$ select count(*)::bigint from public.order_events e join public.orders o on o.id = e.entity_id
