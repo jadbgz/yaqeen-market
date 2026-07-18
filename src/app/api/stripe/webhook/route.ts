@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripeTestConfig } from "@/lib/payments/config";
 import { getStripe } from "@/lib/payments/stripe";
+import { reverseSellerTransferForRefund } from "@/lib/payments/refunds";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -13,6 +14,9 @@ const HANDLED_EVENTS = new Set([
   "payment_intent.payment_failed",
   "payment_intent.canceled",
   "payment_intent.requires_action",
+  "refund.created",
+  "refund.updated",
+  "refund.failed",
 ]);
 
 function stripeState(intent: Stripe.PaymentIntent) {
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "event_claim_failed" }, { status: 500 });
   }
 
-  if (!HANDLED_EVENTS.has(event.type) || !objectId?.startsWith("pi_")) {
+  if (!HANDLED_EVENTS.has(event.type) || (!objectId?.startsWith("pi_") && !objectId?.startsWith("re_"))) {
     await admin.rpc("complete_stripe_webhook_event", {
       requested_provider_event_id: event.id,
       requested_outcome: "ignored",
@@ -95,6 +99,29 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (objectId.startsWith("re_")) {
+      const refund = await stripe.refunds.retrieve(objectId);
+      const localRefundId = refund.metadata?.yaqeen_payment_refund_id;
+      if (!localRefundId) throw Object.assign(new Error("refund_metadata_missing"), { code: "refund_metadata_missing" });
+      const { error: refundError } = await admin.rpc("apply_stripe_refund_state", {
+        requested_payment_refund_id: localRefundId,
+        requested_provider_refund_id: refund.id,
+        requested_status: refund.status,
+        requested_amount_cents: refund.amount,
+        requested_currency: refund.currency,
+        requested_failure_reason: refund.failure_reason ?? null,
+      });
+      if (refundError) throw Object.assign(new Error(refundError.message), { code: refundError.code });
+      if (refund.status === "succeeded") await reverseSellerTransferForRefund(localRefundId);
+      const { error: completeRefundEventError } = await admin.rpc("complete_stripe_webhook_event", {
+        requested_provider_event_id: event.id,
+        requested_outcome: "processed",
+        requested_error_code: null,
+      });
+      if (completeRefundEventError) throw completeRefundEventError;
+      return NextResponse.json({ received: true });
+    }
+
     const intent = await stripe.paymentIntents.retrieve(objectId, { expand: ["latest_charge"] });
     const localStatus = stripeState(intent);
     if (!localStatus) {

@@ -16,6 +16,7 @@ export type OperationsOrder = {
   trackingNumber: string | null;
   deliveredAt: string | null;
   transfer: { status: string; amountCents: number; providerId: string | null; errorCode: string | null } | null;
+  refund: { status: string; amountCents: number; providerId: string | null; errorCode: string | null } | null;
 };
 
 export const getOperationsOrders = cache(async (): Promise<OperationsOrder[] | null> => {
@@ -24,13 +25,14 @@ export const getOperationsOrders = cache(async (): Promise<OperationsOrder[] | n
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("shop_orders")
-    .select("id,order_id,status,total_cents,commission_cents,currency,shipping_carrier,tracking_number,delivered_at,shops(name),payment_transfers(status,transfer_cents,provider_transfer_id,last_error_code)")
-    .in("status", ["shipped", "delivered"])
+    .select("id,order_id,status,total_cents,commission_cents,currency,shipping_carrier,tracking_number,delivered_at,shops(name),payment_transfers(status,transfer_cents,provider_transfer_id,last_error_code),payment_refunds(status,amount_cents,provider_refund_id,last_error_code)")
+    .in("status", ["paid", "preparing", "shipped", "delivered", "refunded"])
     .order("updated_at", { ascending: true })
     .limit(100);
   if (error) return null;
   return (data ?? []).map((row) => {
     const transfer = row.payment_transfers?.[0];
+    const refund = row.payment_refunds?.[0];
     return {
       id: row.id,
       orderId: row.order_id,
@@ -47,6 +49,12 @@ export const getOperationsOrders = cache(async (): Promise<OperationsOrder[] | n
         amountCents: Number(transfer.transfer_cents),
         providerId: transfer.provider_transfer_id,
         errorCode: transfer.last_error_code,
+      } : null,
+      refund: refund ? {
+        status: refund.status,
+        amountCents: Number(refund.amount_cents),
+        providerId: refund.provider_refund_id,
+        errorCode: refund.last_error_code,
       } : null,
     };
   });
