@@ -15,11 +15,11 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
 - authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
-- CI web, mobile et base, avec 352 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 391 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - Stripe Connect sandbox câblé sur le web : onboarding hébergé, Payment Element, webhook signé et consommation atomique du stock.
 
-Les transferts vendeurs, remboursements, litiges et la livraison restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
+La confirmation opérateur de livraison et la libération vendeur sont disponibles en bac à sable avec rapprochement strict. Les remboursements, reversals, litiges, payouts et l’activation live restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
 
 ## Phase 1 — Réaliser une vente de bout en bout
 
@@ -37,7 +37,7 @@ Critère de sortie : aucune lecture inter-boutiques, aucune transition de statut
 
 ### 2. Paiement marketplace
 
-État : pilote web Stripe test livré le 18 juillet 2026. Le vendeur utilise un Account Link hébergé ; le client réserve puis confirme avec Payment Element ; seul le webhook signé peut passer la commande à `paid`. Les transferts, remboursements et litiges restent fermés.
+État : pilote web Stripe test livré le 18 juillet 2026. Le vendeur utilise un Account Link hébergé ; le client réserve puis confirme avec Payment Element ; seul le webhook signé peut passer la commande à `paid`. Après livraison confirmée par un opérateur, un transfert test idempotent peut être rapproché et soumis par sous-commande. Les remboursements et litiges restent fermés.
 
 - documenter Stripe Connect Express dans un nouvel ADR ; `ADR-005` est déjà attribué à la fermeture des écritures catalogue directes ;
 - déléguer KYC/KYB, reversements et exigences de paiement à Stripe ;

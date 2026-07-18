@@ -108,11 +108,11 @@ Conséquences :
 
 ## État d'implémentation au 18 juillet 2026
 
-Le bac à sable web est câblé : SDK serveur et Payment Element, Account Links hébergés, PaymentIntent calculé côté serveur, webhook signé et dédupliqué, puis consommation atomique de la réservation et transition vers `paid`. Les clés live et événements live sont explicitement rejetés.
+Le bac à sable web est câblé : SDK serveur et Payment Element, Account Links hébergés, PaymentIntent calculé côté serveur, webhook signé et dédupliqué, puis consommation atomique de la réservation et transition vers `paid`. La livraison opérateur ouvre désormais un transfert test idempotent par sous-commande, rapproché sur montant, devise, charge et destination. Les clés live et événements live sont explicitement rejetés.
 
 Restent fermés avant une vente réelle :
 
-- transferts vendeurs, calendrier de libération et rapprochement ;
+- calendrier live de libération et rapprochement avec les payouts ;
 - remboursements, reversals et litiges ;
 - Payment Sheet natif ;
 - environnement Stripe live, supervision et procédure opérateur.
