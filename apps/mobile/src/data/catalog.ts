@@ -10,6 +10,7 @@ export type PublicEvidence = {
 
 export type Product = {
   id: string;
+  variantId: string;
   slug: string;
   shopSlug: string;
   name: string;
@@ -37,6 +38,7 @@ type CatalogRow = {
   published_at: string | null;
   shops: { slug: string; name: string; status: string } | null;
   product_variants: {
+    id: string;
     title: string;
     price_cents: number;
     currency: string;
@@ -119,6 +121,7 @@ function mapRow(row: CatalogRow, signedByPath: Map<string, string>): Product | n
 
   return {
     id: row.id,
+    variantId: variant.id,
     slug: row.slug,
     shopSlug: shop.slug,
     name: row.title,

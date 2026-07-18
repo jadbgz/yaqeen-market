@@ -116,7 +116,7 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 ## Phase 4 — Distribution mobile et passage à l'échelle
 
 - [x] partager authentification, compte, adresses et historique de commandes entre Expo et le web ;
-- [ ] partager la commande et le checkout après activation du paiement ;
+- [x] partager la réservation de commande et le checkout test avec iOS/Android via PaymentSheet ;
 - ajouter les notifications push transactionnelles ;
 - valider les exigences App Store et Play Store, puis publier sur les deux stores ;
 - instrumenter le funnel réel sans inventer de métriques ;

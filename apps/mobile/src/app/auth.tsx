@@ -7,7 +7,7 @@ import { useAuth } from '@/state/auth';
 type Mode = 'login' | 'signup' | 'reset';
 
 export default function AuthScreen() {
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; next?: string }>();
   const router = useRouter();
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : params.mode === 'reset' ? 'reset' : 'login');
@@ -32,7 +32,7 @@ export default function AuthScreen() {
         : await auth.requestPasswordReset(email);
     setPending(false);
     if (!result.ok) return setFeedback({ tone: 'error', message: result.message });
-    if (mode === 'login') return router.replace('/account');
+    if (mode === 'login') return router.replace(params.next === '/checkout' ? '/checkout' : '/account');
     setFeedback({
       tone: 'success',
       message: mode === 'reset'

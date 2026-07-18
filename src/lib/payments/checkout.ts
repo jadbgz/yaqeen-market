@@ -1,10 +1,12 @@
 import "server-only";
 
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getViewer } from "@/lib/auth/dal";
 import { getStripe } from "@/lib/payments/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { requireSupabaseConfig } from "@/lib/supabase/config";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 export const checkoutRequestSchema = z.object({
   checkoutToken: z.uuid(),
@@ -58,11 +60,31 @@ async function validateExistingIntent(attempt: PaymentAttemptRow) {
   return intent;
 }
 
-export async function createCheckoutSession(input: z.infer<typeof checkoutRequestSchema>): Promise<CheckoutSessionResult> {
+async function resolveCheckoutIdentity(accessToken?: string): Promise<{ userId: string; userClient: SupabaseClient }> {
+  if (accessToken) {
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.getUser(accessToken);
+    if (error || !data.user) throw new Error("authentication_required");
+    const { url, publishableKey } = requireSupabaseConfig();
+    return {
+      userId: data.user.id,
+      userClient: createSupabaseClient(url, publishableKey, {
+        global: { headers: { Authorization: `Bearer ${accessToken}` } },
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }),
+    };
+  }
+
   const viewer = await getViewer();
   if (!viewer) throw new Error("authentication_required");
+  return { userId: viewer.id, userClient: await createServerClient() };
+}
 
-  const userClient = await createClient();
+export async function createCheckoutSession(
+  input: z.infer<typeof checkoutRequestSchema>,
+  options: { accessToken?: string } = {},
+): Promise<CheckoutSessionResult> {
+  const { userId, userClient } = await resolveCheckoutIdentity(options.accessToken);
   const { data: orderId, error: reservationError } = await userClient.rpc(
     "create_order_reservation_with_address",
     {
@@ -83,7 +105,7 @@ export async function createCheckoutSession(input: z.infer<typeof checkoutReques
     .from("orders")
     .select("id,customer_id,status,total_cents,currency,expires_at,order_shipping_addresses(order_id)")
     .eq("id", orderId)
-    .eq("customer_id", viewer.id)
+    .eq("customer_id", userId)
     .single();
   if (orderError || !order || order.status !== "pending_payment" || !order.order_shipping_addresses) {
     throw new Error("order_not_payable");

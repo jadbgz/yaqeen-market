@@ -10,6 +10,10 @@
     "ios": {
       "bundleIdentifier": "market.yaqeen.app",
       "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": ["fr"]
+      },
       "config": {
         "usesNonExemptEncryption": false
       }
@@ -46,7 +50,13 @@
       ],
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

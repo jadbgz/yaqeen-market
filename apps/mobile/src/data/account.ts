@@ -44,6 +44,19 @@ export async function loadMobileOrders(): Promise<MobileOrder[]> {
   }));
 }
 
+export async function loadMobileOrder(orderId: string): Promise<MobileOrder | null> {
+  const { data: order, error } = await requireClient().from('orders')
+    .select('id,status,total_cents,currency,created_at,shop_orders(id)')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!order) return null;
+  return {
+    id: order.id, status: order.status, totalCents: Number(order.total_cents),
+    currency: order.currency, createdAt: order.created_at, shopCount: order.shop_orders?.length ?? 0,
+  };
+}
+
 export async function loadMobileAddresses(): Promise<MobileAddress[]> {
   const { data, error } = await requireClient().from('customer_addresses')
     .select('id,label,recipient_name,line1,line2,postal_code,city,country_code,phone,is_default')

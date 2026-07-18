@@ -59,4 +59,6 @@ jobs:
       - run: npm run lint
       - run: npx expo customize tsconfig.json
       - run: npx tsc --noEmit
-      - run: npx expo export --platform web
+      - run: npx expo export --platform web --output-dir dist-ci-web
+      - run: npx expo export --platform android --output-dir dist-ci-android
+      - run: npx expo export --platform ios --output-dir dist-ci-ios

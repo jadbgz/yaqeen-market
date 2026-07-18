@@ -21,11 +21,11 @@ Le catalogue distingue quatre états : chargement, prêt, non configuré et erre
 
 ## Identité et navigation
 
-La route produit mobile devient `/product/{shopSlug}/{productSlug}` afin d'éviter les collisions de slugs entre boutiques. Le panier identifie les lignes par UUID produit et borne l'ajout au stock disponible annoncé.
+La route produit mobile devient `/product/{shopSlug}/{productSlug}` afin d'éviter les collisions de slugs entre boutiques. Le panier identifie les lignes par UUID de variante, borne l'ajout au stock disponible annoncé et ne persiste pas les URL signées expirables.
 
 ## Limites
 
-- le panier n'est pas encore persisté ni revalidé côté serveur ;
+- le panier est rapproché du catalogue publié au démarrage puis entièrement revalidé côté serveur au checkout ;
 - l'offre multi-variantes sélectionne provisoirement la variante active la moins chère ;
-- les commandes, la livraison et le paiement restent désactivés ;
+- Apple Pay et Google Pay restent désactivés en attente des identifiants marchands ;
 - les images seront traitées via Supabase Storage dans un chantier dédié.

@@ -8,7 +8,7 @@ Cet audit est conservé publiquement pour documenter la dette technique et les c
 
 ## État après premières corrections
 
-Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, partage le contrat de publication du web, expose la preuve revue et borne les quantités au stock annoncé. Les fixtures et le checkout de démonstration ont été supprimés ; commande, paiement et réservation atomique restent volontairement indisponibles.
+Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, partage le contrat de publication du web, expose la preuve revue et borne les quantités au stock annoncé. Depuis le 19 juillet, son panier persiste les identifiants de variantes, se rapproche du catalogue au démarrage et rejoint la réservation atomique ainsi que Stripe PaymentSheet en mode test sur iOS/Android.
 
 ## Constats critiques
 
@@ -29,7 +29,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-003 — Checkout et paiement absents
 
 - Chantiers : C9, C10, C12, C16
-- État : partiel au 18 juillet ; checkout Stripe test web, Account Links vendeurs, tentative idempotente, webhook signé/dédupliqué et consommation atomique du stock sont livrés. Aucun client ni vendeur ne peut déclarer directement un paiement. Transferts, remboursements, litiges et live restent fermés.
+- État : partiel au 19 juillet ; checkout Stripe test web et natif, Account Links vendeurs, tentative idempotente, webhook signé/dédupliqué et consommation atomique du stock sont livrés. Aucun client ni vendeur ne peut déclarer directement un paiement. Le live reste fermé.
 - Risque : incapacité à encaisser, répartir et rembourser une commande multi-vendeurs.
 - Sortie attendue : décision Stripe Connect documentée, comptes connectés, ventilation par vendeur, webhooks idempotents, remboursements et reversements testés.
 

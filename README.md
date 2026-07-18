@@ -41,7 +41,7 @@ Copy-Item .env.example .env.local
 npm run start
 ```
 
-Renseigner `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` et `EXPO_PUBLIC_SITE_URL`. Seule la clé Supabase publiable doit être embarquée dans l'application ; les droits effectifs restent contrôlés par les politiques RLS de la base.
+Renseigner `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_SITE_URL` et, pour PaymentSheet, `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` avec une clé `pk_test_…`. Seules les clés publiques Supabase et Stripe peuvent être embarquées ; les droits effectifs restent contrôlés par les politiques RLS et les frontières serveur.
 
 Le schéma natif est `yaqeen://`. Avant une distribution iOS ou Android, ajouter l'URL de rappel `yaqeen://auth/callback` et les URL web de production autorisées dans la liste des redirections Supabase Auth.
 
