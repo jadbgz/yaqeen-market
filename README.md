@@ -20,6 +20,18 @@ Ouvrir ensuite [http://localhost:3000](http://localhost:3000).
 
 L'inscription et la connexion utilisent Supabase Auth. Renseigner dans `.env.local` l'URL et la clé publiable fournies par Supabase. Ne jamais exposer une clé `secret` ou `service_role` dans une variable `NEXT_PUBLIC_*`.
 
+## Tester le paiement web
+
+Le checkout refuse toute clé Stripe live. Renseigner uniquement les clés `pk_test_…`, `sk_test_…`, le secret webhook `whsec_…`, la clé `service_role` Supabase côté serveur et `STRIPE_TEST_CHECKOUT_ENABLED=true` dans `.env.local`.
+
+Pour recevoir localement les événements signés avec la CLI Stripe :
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copier le secret `whsec_…` affiché par la CLI, redémarrer Next.js, puis utiliser exclusivement une carte de test Stripe. Le paiement live, les transferts vendeurs et les remboursements restent volontairement désactivés.
+
 ## Lancer l'application mobile
 
 ```bash

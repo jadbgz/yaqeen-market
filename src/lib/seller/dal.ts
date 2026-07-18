@@ -10,6 +10,7 @@ export type SellerDashboard = {
     name: string;
     slug: string;
     status: "draft" | "under_review" | "approved" | "suspended" | "rejected";
+    shipsFromCountry: string;
   };
   metrics: {
     products: number;
@@ -57,7 +58,7 @@ export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null
   const supabase = await createClient();
   let { data: shop } = await supabase
     .from("shops")
-    .select("id, name, slug, status")
+    .select("id, name, slug, status, ships_from_country")
     .eq("owner_id", viewer.id)
     .limit(1)
     .maybeSingle();
@@ -73,7 +74,7 @@ export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null
     if (membership) {
       const result = await supabase
         .from("shops")
-        .select("id, name, slug, status")
+        .select("id, name, slug, status, ships_from_country")
         .eq("id", membership.shop_id)
         .maybeSingle();
       shop = result.data;
@@ -114,13 +115,35 @@ export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null
   }
 
   return {
-    shop,
+    shop: {
+      id: shop.id,
+      name: shop.name,
+      slug: shop.slug,
+      status: shop.status,
+      shipsFromCountry: shop.ships_from_country,
+    },
     metrics: {
       products: productRows.length,
       publishedProducts: productRows.filter((product) => product.status === "published").length,
       availableStock,
       pendingEvidence,
     },
+  };
+});
+
+export const getSellerPaymentState = cache(async () => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("shop_payment_accounts")
+    .select("status,transfers_enabled,requirements_due_count,last_synced_at")
+    .eq("shop_id", dashboard.shop.id)
+    .maybeSingle();
+  return {
+    status: data?.status ?? "not_started",
+    transfersEnabled: data?.transfers_enabled ?? false,
+    requirementsDue: data?.requirements_due_count ?? 0,
+    lastSyncedAt: data?.last_synced_at ?? null,
   };
 });
 

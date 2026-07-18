@@ -15,17 +15,17 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
 - authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
-- CI web, mobile et base, avec 289 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 310 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
-- architecture Stripe Connect décidée et registre pré-réseau livré pour comptes connectés, tentatives, transferts et webhooks dédupliqués.
+- Stripe Connect sandbox câblé sur le web : onboarding hébergé, Payment Element, webhook signé et consommation atomique du stock.
 
-Le paiement, la commande et la livraison restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
+Les transferts vendeurs, remboursements, litiges et la livraison restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
 
 ## Phase 1 — Réaliser une vente de bout en bout
 
 ### 1. Domaine commande et stock
 
-État : noyau pré-paiement étendu le 18 juillet 2026. Les tables, RLS, RPC de réservation/annulation, adresse de livraison figée, worker d'expiration et 67 assertions dédiées sont opérationnels. Les transitions post-paiement restent volontairement fermées.
+État : noyau étendu le 18 juillet 2026. Les tables, RLS, réservation/annulation, adresse figée, expiration et consommation atomique après webhook Stripe signé sont opérationnelles.
 
 - modéliser la commande client, les sous-commandes par boutique et les lignes au prix figé ;
 - définir une machine à états fermée pour paiement, préparation, expédition, livraison, annulation et remboursement ;
@@ -37,7 +37,7 @@ Critère de sortie : aucune lecture inter-boutiques, aucune transition de statut
 
 ### 2. Paiement marketplace
 
-État : architecture Separate Charges and Transfers acceptée dans ADR-010 et registre persistant validé le 17 juillet 2026. Aucun SDK, endpoint, secret ou passage à `paid` n'est encore exposé.
+État : pilote web Stripe test livré le 18 juillet 2026. Le vendeur utilise un Account Link hébergé ; le client réserve puis confirme avec Payment Element ; seul le webhook signé peut passer la commande à `paid`. Les transferts, remboursements et litiges restent fermés.
 
 - documenter Stripe Connect Express dans un nouvel ADR ; `ADR-005` est déjà attribué à la fermeture des écritures catalogue directes ;
 - déléguer KYC/KYB, reversements et exigences de paiement à Stripe ;
@@ -126,9 +126,10 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 1. pagination, recherche et filtres SQL du catalogue ;
 2. édition des fiches, variantes multiples et expiration des preuves ;
-3. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
-4. branchement du checkout uniquement après validation des webhooks et de la consommation du stock ;
-5. tests E2E des liens Auth web/mobile et configuration des domaines de redirection de production.
+3. [x] adaptateur Stripe en mode test, Account Links et handler webhook signé ;
+4. [x] checkout web avec réservation, confirmation et consommation atomique du stock ;
+5. transferts vendeurs idempotents, politique de libération et rapprochement ;
+6. tests E2E des liens Auth web/mobile et configuration des domaines de redirection de production.
 
 ## Garde-fous permanents
 

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(57);
+select plan(78);
 
 select has_type('public', 'connected_payment_account_status', 'connected payment account status enum exists');
 select has_type('public', 'payment_attempt_status', 'payment attempt status enum exists');
@@ -13,6 +13,16 @@ select has_table('public', 'shop_payment_accounts', 'shop payment accounts table
 select has_table('public', 'payment_attempts', 'payment attempts table exists');
 select has_table('public', 'payment_transfers', 'payment transfers table exists');
 select has_table('public', 'stripe_webhook_events', 'Stripe webhook event ledger exists');
+select has_column('public', 'payment_attempts', 'provider_charge_id', 'payment attempts retain the reconciled charge identifier');
+select has_function(
+  'public', 'apply_stripe_payment_intent_state',
+  array['text','text','bigint','text','text','text'],
+  'the trusted Stripe state transition exists'
+);
+select has_trigger(
+  'public', 'payment_attempts', 'payment_attempts_require_ready_sellers',
+  'payment creation requires every seller to have a transfer-ready account'
+);
 
 select results_eq(
   $$
@@ -63,17 +73,19 @@ select results_eq(
      where n.nspname = 'public'
        and p.proname in (
          'sync_stripe_payment_account', 'create_payment_attempt', 'attach_stripe_payment_intent',
-         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event'
+         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event',
+         'apply_stripe_payment_intent_state'
        ) and p.prosecdef $$,
-  $$ values (6::bigint) $$,
-  'all six payment boundaries are security-definer functions'
+  $$ values (7::bigint) $$,
+  'all seven payment boundaries are security-definer functions'
 );
 select results_eq(
   $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.proname in (
          'sync_stripe_payment_account', 'create_payment_attempt', 'attach_stripe_payment_intent',
-         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event'
+         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event',
+         'apply_stripe_payment_intent_state'
        ) and has_function_privilege('anon', p.oid, 'EXECUTE') $$,
   $$ values (0::bigint) $$,
   'anonymous sessions cannot execute payment boundaries'
@@ -83,7 +95,8 @@ select results_eq(
      where n.nspname = 'public'
        and p.proname in (
          'sync_stripe_payment_account', 'create_payment_attempt', 'attach_stripe_payment_intent',
-         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event'
+         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event',
+         'apply_stripe_payment_intent_state'
        ) and has_function_privilege('authenticated', p.oid, 'EXECUTE') $$,
   $$ values (0::bigint) $$,
   'authenticated sessions cannot execute payment boundaries'
@@ -93,9 +106,10 @@ select results_eq(
      where n.nspname = 'public'
        and p.proname in (
          'sync_stripe_payment_account', 'create_payment_attempt', 'attach_stripe_payment_intent',
-         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event'
+         'register_stripe_webhook_event', 'claim_stripe_webhook_event', 'complete_stripe_webhook_event',
+         'apply_stripe_payment_intent_state'
        ) and has_function_privilege('service_role', p.oid, 'EXECUTE') $$,
-  $$ values (6::bigint) $$,
+  $$ values (7::bigint) $$,
   'only the trusted service can reach every payment boundary'
 );
 
@@ -205,6 +219,17 @@ values (
   'active',
   now() + interval '15 minutes'
 );
+
+set local role service_role;
+select throws_ok(
+  $$ select public.create_payment_attempt(
+    '34000000-0000-4000-8000-000000000001',
+    'payment:34000000:account:not-ready'
+  ) $$,
+  '55000', 'seller_payment_account_required',
+  'checkout stays closed until every seller can receive transfers'
+);
+reset role;
 
 set local role service_role;
 select lives_ok(
@@ -507,6 +532,137 @@ select throws_ok(
   ) $$,
   '55000', 'order_not_payable',
   'an expired order cannot start a payment attempt'
+);
+reset role;
+
+set local role service_role;
+select throws_ok(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'processing', 999, 'EUR', null, null
+  ) $$,
+  '23514', 'stripe_payment_amount_mismatch',
+  'a webhook cannot alter the server-side payment amount'
+);
+select results_eq(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'processing', 1000, 'eur', null, null
+  ) $$,
+  $$ values ('processing'::text) $$,
+  'a verified processing intent advances the local attempt'
+);
+reset role;
+
+select results_eq(
+  $$ select status::text, last_error_code from public.payment_attempts
+     where provider_payment_intent_id = 'pi_1234567890' $$,
+  $$ values ('processing'::text, null::text) $$,
+  'processing state is persisted without exposing it to the customer'
+);
+
+set local role service_role;
+select throws_ok(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'succeeded', 1000, 'EUR', null, null
+  ) $$,
+  '22023', 'succeeded_payment_requires_charge',
+  'a success without a reconciled charge is rejected'
+);
+select results_eq(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'succeeded', 1000, 'eur', 'ch_1234567890', null
+  ) $$,
+  $$ values ('paid'::text) $$,
+  'a verified success atomically pays the order'
+);
+reset role;
+
+select results_eq(
+  $$ select status::text, provider_charge_id, succeeded_at is not null
+     from public.payment_attempts where provider_payment_intent_id = 'pi_1234567890' $$,
+  $$ values ('succeeded'::text, 'ch_1234567890'::text, true) $$,
+  'the attempt retains its terminal state and charge identifier'
+);
+select results_eq(
+  $$ select status::text, paid_at is not null from public.orders
+     where id = '34000000-0000-4000-8000-000000000001' $$,
+  $$ values ('paid'::text, true) $$,
+  'the aggregate order is paid only by the trusted transition'
+);
+select results_eq(
+  $$ select status::text from public.shop_orders
+     where id = '35000000-0000-4000-8000-000000000001' $$,
+  $$ values ('paid'::text) $$,
+  'every seller sub-order advances with the aggregate'
+);
+select results_eq(
+  $$ select status::text, released_at is null from public.inventory_reservations
+     where order_id = '34000000-0000-4000-8000-000000000001' $$,
+  $$ values ('consumed'::text, true) $$,
+  'the paid reservation is consumed rather than released'
+);
+select results_eq(
+  $$ select stock_on_hand, stock_reserved from public.product_variants
+     where id = '33000000-0000-4000-8000-000000000001' $$,
+  $$ values (1, 0) $$,
+  'stock on hand and reserved stock move atomically on payment'
+);
+select results_eq(
+  $$ select count(*)::bigint from public.order_events
+     where entity_type = 'order'
+       and entity_id = '34000000-0000-4000-8000-000000000001'
+       and to_status = 'paid'
+       and reason = 'stripe_payment_intent_succeeded' $$,
+  $$ values (1::bigint) $$,
+  'the payment transition leaves one aggregate audit event'
+);
+
+set local role service_role;
+select results_eq(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'succeeded', 1000, 'EUR', 'ch_1234567890', null
+  ) $$,
+  $$ values ('duplicate'::text) $$,
+  'a semantic duplicate cannot consume stock twice'
+);
+select throws_ok(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'succeeded', 1000, 'EUR', 'ch_0987654321', null
+  ) $$,
+  '23514', 'stripe_charge_identity_conflict',
+  'a duplicate intent cannot be rebound to another charge'
+);
+select results_eq(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'processing', 1000, 'EUR', null, null
+  ) $$,
+  $$ values ('stale'::text) $$,
+  'an out-of-order event cannot downgrade a paid attempt'
+);
+reset role;
+
+select results_eq(
+  $$ select stock_on_hand, stock_reserved from public.product_variants
+     where id = '33000000-0000-4000-8000-000000000001' $$,
+  $$ values (1, 0) $$,
+  'duplicate and stale events leave stock unchanged'
+);
+select results_eq(
+  $$ select count(*)::bigint from public.order_events
+     where entity_type = 'order'
+       and entity_id = '34000000-0000-4000-8000-000000000001'
+       and to_status = 'paid' $$,
+  $$ values (1::bigint) $$,
+  'duplicate events do not duplicate audit history'
+);
+
+set local role authenticated;
+set local "request.jwt.claims" = '{"sub":"30000000-0000-0000-0000-000000000002","role":"authenticated"}';
+select throws_ok(
+  $$ select public.apply_stripe_payment_intent_state(
+    'pi_1234567890', 'processing', 1000, 'EUR', null, null
+  ) $$,
+  '42501', 'permission denied for function apply_stripe_payment_intent_state',
+  'a customer cannot invoke the trusted payment transition'
 );
 reset role;
 

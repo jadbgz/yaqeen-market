@@ -1,6 +1,6 @@
 # ADR-010 — Stripe Connect et flux financiers multi-vendeurs
 
-- Statut : accepté pour le pilote, implémentation réseau différée
+- Statut : accepté et exécuté en bac à sable pour le pilote
 - Date : 2026-07-17
 - Portée : onboarding financier vendeur, paiement client, commissions, transferts, remboursements et litiges
 
@@ -37,7 +37,7 @@ Le code devra utiliser les propriétés de contrôleur stables disponibles sur l
 4. Le client confirme avec Payment Element ou Payment Sheet. Le `client_secret` n'est jamais journalisé, stocké dans une URL ou communiqué à un autre client.
 5. Le webhook signé est dédupliqué puis récupère l'objet Stripe à jour avant toute transition.
 6. Après succès, la réservation devient stock consommé et la commande devient `paid` dans une même frontière métier.
-7. Un transfert idempotent est créé par sous-commande uniquement lorsque la politique de libération vendeur est satisfaite.
+7. Un transfert idempotent sera créé par sous-commande uniquement lorsque la politique de libération vendeur sera satisfaite. Cette dernière étape reste fermée dans le lot sandbox actuel.
 
 La date précise des transferts et des payouts doit être validée avec Stripe et le conseil juridique. Stripe ne fournit pas de service d'escrow ; ce terme ne doit jamais apparaître dans le produit.
 
@@ -106,12 +106,13 @@ Conséquences :
 - https://docs.stripe.com/payments/payment-intents
 - https://docs.stripe.com/payments/mobile/accept-payment?platform=react-native
 
-## Ce qui reste fermé
+## État d'implémentation au 18 juillet 2026
 
-- aucun SDK Stripe n'est installé ;
-- aucun endpoint ne crée de PaymentIntent ou d'Account Link ;
-- aucun webhook public n'est exposé ;
-- aucune transition vers `paid` ou création de transfert n'est disponible ;
-- aucun checkout n'est affiché.
+Le bac à sable web est câblé : SDK serveur et Payment Element, Account Links hébergés, PaymentIntent calculé côté serveur, webhook signé et dédupliqué, puis consommation atomique de la réservation et transition vers `paid`. Les clés live et événements live sont explicitement rejetés.
 
-Le premier lot ne crée que le registre persistant et les frontières d'idempotence nécessaires à une future intégration sûre.
+Restent fermés avant une vente réelle :
+
+- transferts vendeurs, calendrier de libération et rapprochement ;
+- remboursements, reversals et litiges ;
+- Payment Sheet natif ;
+- environnement Stripe live, supervision et procédure opérateur.

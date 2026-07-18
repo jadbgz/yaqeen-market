@@ -2,7 +2,7 @@
 
 ## Verdict
 
-Le projet possède une direction artistique cohérente et des parcours front-end démontrables. Depuis le 17 juillet, l'identité, le catalogue vendeur, la modération et les storefronts web et mobile reposent sur PostgreSQL ; le paiement multi-vendeurs, la logistique et les images restent à construire.
+Le projet possède une direction artistique cohérente et des parcours front-end démontrables. Identité, catalogue vendeur, modération, storefronts web/mobile, médias et premier checkout Stripe sandbox reposent désormais sur PostgreSQL. Transferts vendeurs, remboursements et logistique restent à construire.
 
 Cet audit est conservé publiquement pour documenter la dette technique et les corrections. La matrice de pilotage détaillée est tenue dans le dépôt privé Yaqeen.
 
@@ -29,7 +29,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-003 — Checkout et paiement absents
 
 - Chantiers : C9, C10, C12, C16
-- État : partiel au 17 juillet ; agrégat client, sous-commandes vendeur, snapshots de prix, réservation atomique, annulation et expiration sont livrés. Le registre Stripe Connect pré-réseau ajoute comptes connectés, tentatives idempotentes, transferts et webhooks dédupliqués. Le checkout simulé reste retiré et aucun rôle client/vendeur ne peut déclarer un paiement.
+- État : partiel au 18 juillet ; checkout Stripe test web, Account Links vendeurs, tentative idempotente, webhook signé/dédupliqué et consommation atomique du stock sont livrés. Aucun client ni vendeur ne peut déclarer directement un paiement. Transferts, remboursements, litiges et live restent fermés.
 - Risque : incapacité à encaisser, répartir et rembourser une commande multi-vendeurs.
 - Sortie attendue : décision Stripe Connect documentée, comptes connectés, ventilation par vendeur, webhooks idempotents, remboursements et reversements testés.
 
@@ -55,7 +55,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 - A-007 — produits dupliqués : corrigé le 17 juillet ; les sources statiques web et Expo sont supprimées et les deux clients appliquent le même contrat Supabase. Voir ADR-007 et ADR-008.
 - A-008 — contrôles décoratifs sans action : C8, C11, C13 ; navigation Seller non disponible rendue explicitement inactive et menu mobile câblé. Audit web global restant.
 - A-009 — frais de port calculés au panier global : calcul fictif retiré du web ; règles et seuils persistés par vendeur restent ouverts.
-- A-010 — stock absent et quantités illimitées : C6, C9, partiel ; stock affiché et quantités bornées côté clients, réservation atomique idempotente et libération à l'annulation/expiration livrées. La consommation de réservation après webhook de paiement reste ouverte.
+- A-010 — stock absent et quantités illimitées : C6, C9, traité pour le pilote ; quantités bornées, réservation idempotente, libération à l'annulation/expiration et consommation atomique après webhook signé sont livrées.
 
 ## Qualité, performance et accessibilité
 

@@ -73,6 +73,30 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   }));
 }
 
+export async function getCustomerOrder(orderId: string): Promise<CustomerOrder | null> {
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("id,status,total_cents,currency,created_at,shop_orders(id,status,subtotal_cents)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id,
+    status: data.status,
+    totalCents: Number(data.total_cents),
+    currency: data.currency,
+    createdAt: data.created_at,
+    shops: (data.shop_orders ?? []).map((shop) => ({
+      id: shop.id,
+      status: shop.status,
+      subtotalCents: Number(shop.subtotal_cents),
+    })),
+  };
+}
+
 export async function getPendingDeletionRequest() {
   const viewer = await getViewer();
   if (!viewer) return null;

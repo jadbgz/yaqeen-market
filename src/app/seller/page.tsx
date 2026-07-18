@@ -3,8 +3,10 @@ import { AccountAccess } from "@/components/account-access";
 import { SellerChrome } from "@/components/seller-chrome";
 import { SellerOnboardingForm } from "@/components/seller-onboarding-form";
 import { getViewer } from "@/lib/auth/dal";
-import { getSellerDashboard } from "@/lib/seller/dal";
+import { getSellerDashboard, getSellerPaymentState } from "@/lib/seller/dal";
 import { getSupabaseConfig } from "@/lib/supabase/config";
+import { isStripeTestCheckoutConfigured } from "@/lib/payments/config";
+import { SellerPaymentPanel } from "@/components/seller-payment-panel";
 import { submitShopForReview } from "./review-actions";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ export default async function SellerPage({ searchParams }: { searchParams: Promi
   }
 
   const { shop, metrics } = dashboard;
+  const paymentState = await getSellerPaymentState();
   const params = await searchParams;
   const userName = viewer.displayName || viewer.email?.split("@")[0] || "Membre";
 
@@ -43,6 +46,7 @@ export default async function SellerPage({ searchParams }: { searchParams: Promi
         {params.shop_submitted && <div className="seller-success" role="status"><span>✓</span><div><strong>Boutique transmise à l’équipe Yaqeen.</strong><p>Son statut est verrouillé pendant la revue.</p></div></div>}{params.review_error && <div className="seller-form-feedback">Soumission refusée : complétez notamment une présentation d’au moins 20 caractères et le pays d’expédition.</div>}
         <div className="seller-status-card"><div><span>{shop.status === "approved" ? "✓" : "01"}</span></div><section><p>STATUT DE LA BOUTIQUE</p><h2>{shop.status === "draft" ? "Votre boutique est en brouillon." : shop.status === "under_review" ? "La revue Yaqeen est en cours." : shop.status === "approved" ? "Votre boutique est publiée." : "Votre boutique demande une intervention."}</h2><small>Aucune donnée commerciale n’est simulée sur cet écran.</small>{(shop.status === "draft" || shop.status === "rejected") && <form action={submitShopForReview}><button className="seller-review-button" type="submit">Soumettre la boutique à la revue →</button></form>}</section></div>
         <div className="seller-metrics"><Metric label="Produits" value={String(metrics.products)} detail="Fiches réellement enregistrées" accent /><Metric label="Produits publiés" value={String(metrics.publishedProducts)} detail="Visibles par les clients" /><Metric label="Stock disponible" value={String(metrics.availableStock)} detail="Physique moins réservé" /><Metric label="Preuves en attente" value={String(metrics.pendingEvidence)} detail="À examiner par Yaqeen" /></div>
+        {shop.status === "approved" && paymentState && <SellerPaymentPanel state={paymentState} configured={isStripeTestCheckoutConfigured()} />}
         <section className="seller-real-empty"><p>CATALOGUE VENDEUR</p><h2>{metrics.products === 0 ? "Ajoutez votre premier produit." : "Continuez à structurer votre offre."}</h2><p>Chaque création enregistre ensemble la fiche, sa première variante, son stock et une preuve. Elle reste privée jusqu’à la revue Yaqeen.</p><Link className="seller-inline-cta" href="/seller/produits">Ouvrir le catalogue →</Link><span>Commandes et chiffre d’affaires resteront absents jusqu’à l’existence d’un vrai flux de commande.</span></section>
       </div>
     </SellerChrome>
