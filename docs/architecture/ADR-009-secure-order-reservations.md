@@ -1,7 +1,7 @@
 # ADR-009 — Commandes multi-vendeurs et réservations de stock
 
 - Statut : accepté pour le noyau pré-paiement
-- Date : 2026-07-17
+- Date : 2026-07-18
 - Portée : commandes, sous-commandes vendeur, prix figés, stock et audit
 
 ## Contexte
@@ -18,7 +18,7 @@ Une commande Yaqeen est composée de :
 - des `inventory_reservations` limitées dans le temps ;
 - des `order_events` append-only pour tracer chaque transition.
 
-La création passe exclusivement par `create_order_reservation`. La fonction :
+La création exposée aux clients passe exclusivement par `create_order_reservation_with_address`. Cette frontière valide une adresse appartenant au client, puis délègue au noyau interne `create_order_reservation`. Le droit d'exécution direct de l'ancien RPC est retiré au rôle `authenticated`. La transaction :
 
 1. dérive le client de `auth.uid()` ;
 2. valide strictement le panier JSON ;
@@ -27,7 +27,8 @@ La création passe exclusivement par `create_order_reservation`. La fonction :
 5. verrouille les variantes dans un ordre déterministe ;
 6. refuse boutique, produit, preuve ou variante non publiable ;
 7. vérifie le stock disponible puis incrémente `stock_reserved` ;
-8. crée atomiquement agrégat, sous-commandes, snapshots, réservations et événements.
+8. crée atomiquement agrégat, sous-commandes, snapshots, réservations et événements ;
+9. fige une copie de livraison indépendante du carnet d'adresses modifiable.
 
 Une réservation expire après quinze minutes. Un client peut annuler uniquement sa propre commande `pending_payment`. Le worker `expire_pending_orders`, exécutable uniquement par `service_role`, libère les réservations échues. Les deux chemins journalisent la fermeture de l'agrégat et de chaque sous-commande.
 
@@ -46,6 +47,7 @@ Le futur webhook Stripe devra être l'unique autorité capable de passer une com
 
 - `stock_reserved` ne dépasse jamais `stock_on_hand` ;
 - un rejeu du même jeton ne crée ni nouvelle commande ni double réservation ;
+- un rejeu avec une autre adresse est rejeté et un rejeu avec la même adresse conserve le snapshot initial ;
 - une variante n'apparaît qu'une fois dans une commande ;
 - le total est dérivé des snapshots serveur, jamais d'un prix envoyé par le client ;
 - un produit doit être publié par une boutique approuvée et posséder une preuve approuvée ;
@@ -54,7 +56,7 @@ Le futur webhook Stripe devra être l'unique autorité capable de passer une com
 
 ## Limites assumées
 
-- aucune adresse ni option de livraison n'est encore rattachée à la commande ;
+- l'adresse est figée, mais les options et tarifs de livraison par boutique restent à définir ;
 - `shipping_cents` et `commission_cents` restent à zéro ;
 - aucun paiement n'est initié ;
 - aucune interface n'appelle encore la réservation ;
@@ -64,4 +66,4 @@ Ces limites maintiennent une frontière honnête : le domaine peut être testé 
 
 ## Critère de révision
 
-Réviser cet ADR lors de l'adoption de Stripe Connect, du modèle d'adresse figée et des règles de livraison par boutique. Les migrations futures devront conserver les snapshots historiques et étendre les tests d'attaque avant d'exposer une nouvelle transition.
+Réviser cet ADR lors de l'adoption de Stripe Connect et des règles de livraison par boutique. Les migrations futures devront conserver les snapshots historiques et étendre les tests d'attaque avant d'exposer une nouvelle transition.

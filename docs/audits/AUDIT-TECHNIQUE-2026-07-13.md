@@ -22,7 +22,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-002 — Authentification incomplète
 
 - Chantiers : C5, C16
-- État : partiel au 15 juillet ; inscription, confirmation e-mail PKCE, connexion, sessions SSR, espace compte protégé et déconnexion câblés. Récupération, suppression, rôles et tests E2E restent ouverts.
+- État : partiel au 18 juillet ; inscription, confirmation e-mail PKCE, connexion, sessions SSR, récupération et changement de mot de passe, carnet d'adresses, historique réel et demande de suppression réversible sont câblés. Le worker de suppression finale, la politique de conservation et les tests E2E restent ouverts.
 - Risque : aucune identité client, vendeur ou opérateur ; impossibilité de sécuriser commandes et boutiques.
 - Sortie attendue : inscription, connexion, vérification d'adresse, récupération, déconnexion, suppression de compte, rôles et sessions testés.
 
@@ -71,7 +71,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 
 1. C9/C10/C12 : commande multi-vendeurs, réservation de stock, paiement et livraison.
 2. C6/C11 : médias produits, édition du catalogue et expiration des preuves.
-3. C5 : récupération, suppression de compte et adresses client.
+3. C5 : finalisation de la suppression après conservation et partage du compte avec Expo.
 4. C14/C16/C18 : recherche paginée, SEO, sécurité, performance et accessibilité.
 5. C13 : avis vérifiés, pages boutiques, retours et matérialisation publique de la confiance.
 

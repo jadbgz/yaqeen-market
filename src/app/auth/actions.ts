@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 export type AuthState = {
   status: "idle" | "error" | "confirmation";
   message?: string;
-  fieldErrors?: Partial<Record<"displayName" | "email" | "password", string[]>>;
+  fieldErrors?: Partial<Record<"displayName" | "email" | "password" | "currentPassword", string[]>>;
 };
 
 const email = z.email("Saisissez une adresse e-mail valide.").trim().toLowerCase();
@@ -27,6 +27,9 @@ const signupSchema = loginSchema.extend({
     .min(2, "Indiquez un nom d’au moins 2 caractères.")
     .max(80, "Le nom ne peut pas dépasser 80 caractères."),
 });
+const resetSchema = z.object({ email });
+const newPasswordSchema = z.object({ password });
+const changePasswordSchema = z.object({ currentPassword: password, password });
 
 function unavailableState(): AuthState {
   return {
@@ -52,6 +55,13 @@ function safeRedirect(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
     ? value
     : "/compte";
+}
+
+function isRecoverySession(claims: Record<string, unknown>) {
+  const methods = claims.amr;
+  return Array.isArray(methods) && methods.some((entry) =>
+    typeof entry === "object" && entry !== null && "method" in entry && entry.method === "recovery"
+  );
 }
 
 export async function login(
@@ -117,4 +127,63 @@ export async function logout() {
     await supabase.auth.signOut();
   }
   redirect("/");
+}
+
+export async function requestPasswordReset(
+  _previousState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = resetSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!getSupabaseConfig()) return unavailableState();
+
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${getSiteUrl()}/auth/confirm?next=${encodeURIComponent("/compte/mot-de-passe")}`,
+  });
+  return {
+    status: "confirmation",
+    message: "Si un compte correspond à cette adresse, un lien sécurisé vient d’être envoyé.",
+  };
+}
+
+export async function updateRecoveredPassword(
+  _previousState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = newPasswordSchema.safeParse({ password: formData.get("password") });
+  if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!getSupabaseConfig()) return unavailableState();
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!claims?.claims.sub || !isRecoverySession(claims.claims as Record<string, unknown>)) {
+    return { status: "error", message: "Ce lien a expiré. Demandez-en un nouveau." };
+  }
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) return providerError(error.message);
+  return { status: "confirmation", message: "Votre mot de passe a été mis à jour." };
+}
+
+export async function changePassword(
+  _previousState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!getSupabaseConfig()) return unavailableState();
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const viewerEmail = typeof claims?.claims.email === "string" ? claims.claims.email : null;
+  if (!viewerEmail) return { status: "error", message: "Reconnectez-vous avant de modifier votre mot de passe." };
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: viewerEmail,
+    password: parsed.data.currentPassword,
+  });
+  if (reauthError) return { status: "error", message: "Le mot de passe actuel est incorrect." };
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) return providerError(error.message);
+  return { status: "confirmation", message: "Votre mot de passe a été modifié." };
 }

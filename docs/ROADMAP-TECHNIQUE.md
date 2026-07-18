@@ -1,6 +1,6 @@
 # Roadmap technique produit
 
-- Référence : état du dépôt au 17 juillet 2026, commit `48cbb12`
+- Référence : état du dépôt au 18 juillet 2026
 - Portée : web Next.js, application Expo, Supabase/PostgreSQL, sécurité et exploitation
 - Objectif : passer d'un socle marketplace fiable à une première commande réelle livrée
 
@@ -14,7 +14,7 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - écritures sensibles exclusivement par RPC métier ;
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
-- CI web, mobile et base, avec 247 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 289 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - architecture Stripe Connect décidée et registre pré-réseau livré pour comptes connectés, tentatives, transferts et webhooks dédupliqués.
 
@@ -24,7 +24,7 @@ Le paiement, la commande et la livraison restent volontairement indisponibles ta
 
 ### 1. Domaine commande et stock
 
-État : noyau pré-paiement livré le 17 juillet 2026. Les tables, RLS, RPC de réservation/annulation, worker d'expiration et 65 assertions dédiées sont opérationnels. Les transitions post-paiement restent volontairement fermées.
+État : noyau pré-paiement étendu le 18 juillet 2026. Les tables, RLS, RPC de réservation/annulation, adresse de livraison figée, worker d'expiration et 67 assertions dédiées sont opérationnels. Les transitions post-paiement restent volontairement fermées.
 
 - modéliser la commande client, les sous-commandes par boutique et les lignes au prix figé ;
 - définir une machine à états fermée pour paiement, préparation, expédition, livraison, annulation et remboursement ;
@@ -62,10 +62,13 @@ Critère de sortie : aucun produit publiable sans média approuvé, accessible e
 
 ### 4. Cycle produit et compte client
 
+État compte : carnet d'adresses RPC-only, historique réel, récupération et changement de mot de passe, ainsi que demande de suppression réversible à 30 jours livrés le 18 juillet 2026. La suppression finale reste volontairement réservée à un worker de confiance appliquant la politique de conservation.
+
 - permettre l'édition d'un brouillon et le retour en brouillon après rejet ;
 - prendre en charge plusieurs variantes et plusieurs preuves ;
 - expirer les preuves arrivées à échéance et retirer automatiquement les produits non conformes ;
-- ajouter adresses sécurisées, historique de commandes, récupération de mot de passe et suppression de compte.
+- [x] ajouter adresses sécurisées, historique de commandes, récupération de mot de passe et demande de suppression de compte ;
+- [ ] automatiser la suppression finale après validation de la politique de conservation et des objets Storage.
 
 ### Sortie de phase
 
@@ -119,11 +122,11 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Ordre d'exécution immédiat
 
-1. adresses figées, récupération de mot de passe et premier lot de durcissement ;
-2. pagination, recherche et filtres SQL du catalogue ;
-3. édition des fiches, variantes multiples et expiration des preuves ;
-4. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
-5. branchement du checkout uniquement après validation des webhooks et de la consommation du stock.
+1. pagination, recherche et filtres SQL du catalogue ;
+2. édition des fiches, variantes multiples et expiration des preuves ;
+3. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
+4. branchement du checkout uniquement après validation des webhooks et de la consommation du stock ;
+5. partage de l'authentification et du compte client avec Expo.
 
 ## Garde-fous permanents
 

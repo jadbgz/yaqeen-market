@@ -63,6 +63,7 @@ export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | n
               {state.message && <p className={`account-feedback ${state.status}`}>{state.message}</p>}
               <button type="submit" disabled={pending} className="account-submit">{pending ? "Un instant…" : open === "login" ? "Se connecter →" : "Créer mon compte →"}</button>
             </form>
+            {open === "login" && <Link className="account-forgot" href="/compte/mot-de-passe-oublie">Mot de passe oublié ?</Link>}
             <div className="account-switch">{open === "login" ? <>Pas encore membre ? <button onClick={() => setOpen("join")}>Créer un compte</button></> : <>Déjà membre ? <button onClick={() => setOpen("login")}>Se connecter</button></>}</div>
             <div className="seller-suggestion"><div><span>Vous êtes commerçant ?</span><strong>Vendez vos produits sur Yaqeen Market.</strong><small>Créez d’abord votre compte, puis ouvrez gratuitement votre espace vendeur.</small></div><Link href="/seller">Découvrir Yaqeen Seller ↗</Link></div>
           </section>

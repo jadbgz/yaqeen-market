@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(65);
+select plan(67);
 
 select has_type('public', 'order_status', 'order status enum exists');
 select has_type('public', 'shop_order_status', 'shop order status enum exists');
@@ -60,7 +60,7 @@ select results_eq(
 
 select results_eq(
   $$ select count(*)::bigint from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'create_order_reservation' and p.prosecdef $$,
+     where n.nspname = 'public' and p.proname = 'create_order_reservation_with_address' and p.prosecdef $$,
   $$ values (1::bigint) $$,
   'order reservation is a security-definer boundary'
 );
@@ -78,13 +78,13 @@ select results_eq(
 );
 select results_eq(
   $$ select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'create_order_reservation' $$,
+     where n.nspname = 'public' and p.proname = 'create_order_reservation_with_address' $$,
   $$ values (false) $$,
   'anonymous visitors cannot reserve stock'
 );
 select results_eq(
   $$ select has_function_privilege('authenticated', p.oid, 'EXECUTE') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'create_order_reservation' $$,
+     where n.nspname = 'public' and p.proname = 'create_order_reservation_with_address' $$,
   $$ values (true) $$,
   'authenticated customers can reach the guarded reservation RPC'
 );
@@ -203,12 +203,21 @@ insert into public.product_evidence (
     now()
   );
 
+insert into public.customer_addresses (
+  id, customer_id, label, recipient_name, line1, postal_code, city, country_code, phone, is_default
+) values (
+  '23500000-0000-4000-8000-000000000001',
+  '20000000-0000-0000-0000-000000000002',
+  'Domicile', 'Amina Test', '12 rue de la Confiance', '75011', 'Paris', 'FR', '+33600000000', true
+);
+
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"20000000-0000-0000-0000-000000000002","role":"authenticated"}';
 select lives_ok(
-  $$ select public.create_order_reservation(
+  $$ select public.create_order_reservation_with_address(
     '[{"variant_id":"23000000-0000-4000-8000-000000000001","quantity":2},{"variant_id":"23000000-0000-4000-8000-000000000003","quantity":1}]'::jsonb,
-    '24000000-0000-4000-8000-000000000001'
+    '24000000-0000-4000-8000-000000000001',
+    '23500000-0000-4000-8000-000000000001'
   ) $$,
   'a customer can atomically create an order and reserve available stock'
 );
@@ -263,13 +272,21 @@ select results_eq(
   $$ values (1::bigint) $$,
   'order creation leaves an audit event'
 );
+select results_eq(
+  $$ select recipient_name, line1, postal_code, city, country_code::text
+     from public.order_shipping_addresses osa join public.orders o on o.id = osa.order_id
+     where o.checkout_token = '24000000-0000-4000-8000-000000000001' $$,
+  $$ values ('Amina Test'::text, '12 rue de la Confiance'::text, '75011'::text, 'Paris'::text, 'FR'::text) $$,
+  'checkout captures an immutable delivery-address snapshot'
+);
 
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"20000000-0000-0000-0000-000000000002","role":"authenticated"}';
 select results_eq(
-  $$ select public.create_order_reservation(
+  $$ select public.create_order_reservation_with_address(
     '[{"variant_id":"23000000-0000-4000-8000-000000000001","quantity":2},{"variant_id":"23000000-0000-4000-8000-000000000003","quantity":1}]'::jsonb,
-    '24000000-0000-4000-8000-000000000001'
+    '24000000-0000-4000-8000-000000000001',
+    '23500000-0000-4000-8000-000000000001'
   ) $$,
   $$ select id from public.orders where checkout_token = '24000000-0000-4000-8000-000000000001' $$,
   'replaying the checkout token returns the original order'
@@ -341,17 +358,24 @@ select throws_ok(
   'a customer cannot forge an order with a direct insert'
 );
 select throws_ok(
-  $$ select public.create_order_reservation(
+  $$ update public.order_shipping_addresses set city = 'Lyon' $$,
+  '42501', 'permission denied for table order_shipping_addresses',
+  'a customer cannot rewrite a captured delivery address'
+);
+select throws_ok(
+  $$ select public.create_order_reservation_with_address(
     '[{"variant_id":"23000000-0000-4000-8000-000000000001","quantity":4}]'::jsonb,
-    '24000000-0000-4000-8000-000000000002'
+    '24000000-0000-4000-8000-000000000002',
+    '23500000-0000-4000-8000-000000000001'
   ) $$,
   '23514', 'insufficient_stock',
   'a concurrent order cannot reserve more than available stock'
 );
 select throws_ok(
-  $$ select public.create_order_reservation(
+  $$ select public.create_order_reservation_with_address(
     '[{"variant_id":"23000000-0000-4000-8000-000000000002","quantity":1}]'::jsonb,
-    '24000000-0000-4000-8000-000000000003'
+    '24000000-0000-4000-8000-000000000003',
+    '23500000-0000-4000-8000-000000000001'
   ) $$,
   '22023', 'variant_not_orderable',
   'a draft product cannot enter an order'
@@ -435,9 +459,10 @@ select throws_ok(
   'a cancelled order cannot be cancelled twice'
 );
 select lives_ok(
-  $$ select public.create_order_reservation(
+  $$ select public.create_order_reservation_with_address(
     '[{"variant_id":"23000000-0000-4000-8000-000000000001","quantity":1}]'::jsonb,
-    '24000000-0000-4000-8000-000000000004'
+    '24000000-0000-4000-8000-000000000004',
+    '23500000-0000-4000-8000-000000000001'
   ) $$,
   'a new reservation can be created after the previous one releases stock'
 );
