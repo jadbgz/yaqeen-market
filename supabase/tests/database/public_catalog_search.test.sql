@@ -36,7 +36,8 @@ select results_eq(
 );
 select results_eq(
   $$ select public.searchable_text('Ambré — ÉLÉGANT') $$,
-  $$ values ('ambre — elegant'::text) $$,
+  -- unaccent also transliterates typographic dashes to a plain hyphen.
+  $$ values ('ambre - elegant'::text) $$,
   'search normalization folds case and accents'
 );
 
