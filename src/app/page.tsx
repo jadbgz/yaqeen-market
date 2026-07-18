@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AccountAccess } from "@/components/account-access";
-import { CartLink } from "@/components/cart-link";
+import { MarketHeader } from "@/components/market-header";
 import { getPublicProducts } from "@/lib/catalog/dal";
 import { formatPrice } from "@/lib/catalog/format";
 import { productHref } from "@/lib/catalog/types";
@@ -12,23 +11,7 @@ export default async function Home() {
   const products = await getPublicProducts({ limit: 4 });
   return (
     <main className="min-h-screen overflow-hidden bg-[#e9e1d2] text-[#171b18]">
-      <header className="relative z-20 border-b border-[#24231f]/15 bg-[#e9e1d2]">
-        <div className="mx-auto flex max-w-[1440px] items-center px-5 py-5 md:px-10">
-          <a href="#" className="brand-mark">yaqeen<span>✦</span></a>
-          <form action="/catalogue" className="mx-auto hidden w-[min(480px,42vw)] md:block"><label className="flex items-center gap-3 rounded-full border border-[#24231f]/20 bg-white/35 px-4 py-2.5"><span>⌕</span><input name="q" className="w-full bg-transparent text-[11px] outline-none" placeholder="Rechercher un produit, une marque, une boutique…" /></label></form>
-          <nav className="ml-auto hidden items-center gap-6 text-[11px] font-medium lg:flex"><Link href="/catalogue">Catalogue</Link><Link href="/catalogue?sort=selection">Nouveautés</Link><Link href="/seller">Vendre sur Yaqeen</Link></nav>
-          <Link href="/catalogue" className="ml-auto rounded-full border border-[#24231f]/20 px-4 py-2 text-[11px] md:hidden">Rechercher</Link>
-          <AccountAccess />
-          <CartLink variant="icon" />
-        </div>
-        <nav aria-label="Catégories principales" className="border-t border-[#24231f]/10 bg-[#092b5d] text-[#f2eadc]">
-          <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto px-5 md:px-10">
-            <Link href="/catalogue" className="flex shrink-0 items-center gap-2 border-r border-white/15 py-3 pr-5 text-[10px] font-bold"><span aria-hidden="true" className="text-base leading-none">☰</span> Toutes les catégories</Link>
-            {[['Parfums','Parfums'],['Cosmétiques','Cosmétiques'],['Livres','Livres'],['Mode','Mode'],['Bien-être','Bien-être'],['Compléments','Compléments'],['Maison','Maison']].map(([label,category]) => <Link key={category} href={`/catalogue?category=${encodeURIComponent(category)}`} className="shrink-0 px-4 py-3 text-[10px] text-white/80 transition hover:bg-white/10 hover:text-white">{label}</Link>)}
-            <Link href="/catalogue?sort=nouveautes" className="ml-auto shrink-0 py-3 pl-5 text-[10px] font-bold text-[#ef8a61]">Nouveautés</Link>
-          </div>
-        </nav>
-      </header>
+      <MarketHeader />
 
       <section className="relative min-h-[750px] border-b border-white/15 bg-[#092b5d] text-[#f2eadc] lg:min-h-[810px]">
         <Image src="/yaqeen-architectural-hero.avif" alt="Composition architecturale Yaqeen" fill priority className="object-cover object-[66%_center]" sizes="100vw" />

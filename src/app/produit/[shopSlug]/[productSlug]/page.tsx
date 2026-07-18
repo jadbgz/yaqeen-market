@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { CartLink } from "@/components/cart-link";
+import { MarketHeader } from "@/components/market-header";
 import { ProductPurchase } from "@/components/product-purchase";
 import { getPublicProduct, getPublicProducts } from "@/lib/catalog/dal";
 import { formatPrice } from "@/lib/catalog/format";
@@ -57,7 +57,7 @@ export default async function ProductPage({ params }: ProductRouteProps) {
 
   return <main className="product-shell">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-    <header className="market-nav"><Link href="/" className="brand-mark">yaqeen<span>✦</span></Link><Link href="/catalogue" className="back-catalog">← Le catalogue</Link><nav><Link href="/seller">Vendre</Link><Link href="/compte" aria-label="Compte">○</Link><CartLink/></nav></header>
+    <MarketHeader />
     <div className="product-breadcrumb"><Link href="/catalogue">Catalogue</Link><span>/</span><Link href={`/catalogue?category=${encodeURIComponent(product.category)}`}>{product.category}</Link><span>/</span><strong>{product.name}</strong></div>
     <section className="product-detail"><div className="product-gallery product-real-gallery"><span className="gallery-number">PRODUIT PUBLIÉ</span><em>Preuve & images revues</em><Image src={product.media[0].url} alt={product.media[0].altText} fill priority sizes="(max-width: 900px) 100vw, 55vw" unoptimized/><div className="product-thumbnails">{product.media.slice(1).map((media) => <Image key={media.position} src={media.url} alt={media.altText} width={72} height={88} unoptimized/>)}</div></div><div className="product-copy"><p className="product-category">{product.category.toUpperCase()} · {product.shop.toUpperCase()}</p><h1>{product.name}</h1><div className="product-trust-line"><span>✓</span><strong>Vendeur, preuve et médias revus par Yaqeen</strong></div><p className="product-price">{formatPrice(product.price,product.currency)}</p><p className="product-description">{product.description}</p><ProductPurchase product={product}/><div className="product-reassurance"><p><span>◇</span><strong>Expédié par {product.shop}</strong><small>Les délais seront confirmés au paiement</small></p><p><span>✓</span><strong>Pourquoi ce produit est visible</strong><small>{product.verificationSummary}</small></p><p><span>↙</span><strong>Retours sous 14 jours</strong><small>Selon les conditions applicables au produit</small></p></div></div></section>
     <section className="product-proof" aria-labelledby="proof-title"><div><p>LA PREUVE, PAS LE SLOGAN</p><h2 id="proof-title">Ce que nous avons revu<span>.</span></h2></div><dl><div><dt>Périmètre</dt><dd>{product.evidence.scope}</dd></div><div><dt>Nature de la preuve</dt><dd>{product.evidence.kind.replaceAll("_"," ")}</dd></div><div><dt>Émetteur</dt><dd>{product.evidence.issuerName ?? "Déclaration documentée du vendeur"}</dd></div>{product.evidence.referenceNumber&&<div><dt>Référence</dt><dd>{product.evidence.referenceNumber}</dd></div>}<div><dt>Résumé public</dt><dd>{product.evidence.publicSummary}</dd></div></dl></section>

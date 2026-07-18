@@ -157,14 +157,21 @@ export async function getPublicProducts(options: {
   q?: string;
   category?: string;
   sort?: string;
+  availability?: "all" | "available";
+  min?: number;
+  max?: number;
   limit?: number;
 } = {}) {
-  const q = options.q?.trim().toLocaleLowerCase("fr") ?? "";
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr");
+  const q = normalize(options.q?.trim() ?? "");
   const category = options.category?.trim().toLocaleLowerCase("fr") ?? "";
   const products = (await getPublishedProducts()).filter(
     (product) =>
       (!category || category === "tous" || product.category.toLocaleLowerCase("fr") === category) &&
-      (!q || `${product.name} ${product.shop}`.toLocaleLowerCase("fr").includes(q)),
+      (!q || normalize(`${product.name} ${product.shop} ${product.category} ${product.description} ${product.verificationSummary}`).includes(q)) &&
+      (options.availability !== "available" || product.stock > 0) &&
+      (options.min === undefined || product.price >= options.min) &&
+      (options.max === undefined || product.price <= options.max),
   );
 
   products.sort((a, b) => {
