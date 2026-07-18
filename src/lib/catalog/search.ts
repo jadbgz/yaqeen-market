@@ -17,6 +17,10 @@ const schema = z.object({
   availability: z.enum(catalogAvailability).catch("all"),
   min: optionalMoney.catch(undefined),
   max: optionalMoney.catch(undefined),
+  page: z.preprocess(
+    (value) => value === "" || value === undefined ? 1 : Number(value),
+    z.number().int().min(1).max(1000),
+  ).catch(1),
 });
 
 export type CatalogSearch = z.infer<typeof schema>;
@@ -29,6 +33,7 @@ export function parseCatalogSearch(params: Record<string, string | string[] | un
     availability: first(params.availability) ?? "all",
     min: first(params.min),
     max: first(params.max),
+    page: first(params.page),
   });
   if (parsed.min !== undefined && parsed.max !== undefined && parsed.min > parsed.max) {
     return { ...parsed, min: parsed.max, max: parsed.min };
@@ -37,7 +42,8 @@ export function parseCatalogSearch(params: Record<string, string | string[] | un
 }
 
 export function catalogHref(search: CatalogSearch, changes: Partial<Record<keyof CatalogSearch, string | number | undefined>>) {
-  const next = { ...search, ...changes };
+  // Any filter change resets pagination unless the change is the page itself.
+  const next = { ...search, ...changes, ...(changes.page === undefined ? { page: 1 } : {}) };
   const params = new URLSearchParams();
   if (next.q) params.set("q", String(next.q));
   if (next.category && next.category !== "Tous") params.set("category", String(next.category));
@@ -45,6 +51,7 @@ export function catalogHref(search: CatalogSearch, changes: Partial<Record<keyof
   if (next.availability && next.availability !== "all") params.set("availability", String(next.availability));
   if (next.min !== undefined && next.min !== "") params.set("min", String(next.min));
   if (next.max !== undefined && next.max !== "") params.set("max", String(next.max));
+  if (next.page !== undefined && Number(next.page) > 1) params.set("page", String(next.page));
   const query = params.toString();
   return query ? `/catalogue?${query}` : "/catalogue";
 }

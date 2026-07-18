@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { getSupabaseConfig } from "@/lib/supabase/config";
-import { categoryLabel } from "@/lib/catalog/format";
+import { categoryLabel, categoryValue } from "@/lib/catalog/format";
 import type { PublicProduct } from "@/lib/catalog/types";
 
 type PublicCatalogRow = {
@@ -53,6 +53,22 @@ const visualByCategory: Record<string, { color: string; shape: string }> = {
   complements: { color: "#1d2d3f", shape: "bottle" },
   maison: { color: "#d09b47", shape: "box" },
 };
+
+const CATALOG_ROW_SELECT = `
+  id, slug, title, description, category, verification_summary, published_at,
+  shops!inner(slug, name, status),
+  product_variants(id, title, price_cents, currency, stock_on_hand, stock_reserved, active),
+  product_evidence(kind, status, issuer_name, reference_number, scope, valid_from, valid_until, public_summary)
+  ,product_media(storage_path, status, position, alt_text, width, height)
+`;
+
+function createPublicClient() {
+  const config = getSupabaseConfig();
+  if (!config) return null;
+  return createClient(config.url, config.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
 
 function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string>): PublicProduct | null {
   const shop = row.shops;
@@ -105,34 +121,7 @@ function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string
   };
 }
 
-async function queryPublishedProducts(): Promise<PublicProduct[]> {
-  const config = getSupabaseConfig();
-  if (!config) return [];
-
-  const supabase = createClient(config.url, config.publishableKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-  const { data, error } = await supabase
-    .from("products")
-    .select(`
-      id, slug, title, description, category, verification_summary, published_at,
-      shops!inner(slug, name, status),
-      product_variants(id, title, price_cents, currency, stock_on_hand, stock_reserved, active),
-      product_evidence(kind, status, issuer_name, reference_number, scope, valid_from, valid_until, public_summary)
-      ,product_media(storage_path, status, position, alt_text, width, height)
-    `)
-    .eq("status", "published")
-    .eq("shops.status", "approved")
-    .eq("product_variants.active", true)
-    .eq("product_evidence.status", "approved")
-    .order("published_at", { ascending: false });
-
-  if (error) {
-    console.error("Unable to load the public catalog", error.message);
-    return [];
-  }
-
-  const rows = (data ?? []) as unknown as PublicCatalogRow[];
+async function signAndMap(supabase: SupabaseClient, rows: PublicCatalogRow[]): Promise<PublicProduct[]> {
   const paths = rows.flatMap((row) => row.product_media.filter((item) => item.status === "approved").map((item) => item.storage_path));
   const { data: signed, error: signError } = paths.length
     ? await supabase.storage.from("product-media").createSignedUrls(paths, 3600)
@@ -151,40 +140,204 @@ async function queryPublishedProducts(): Promise<PublicProduct[]> {
     .filter((product): product is PublicProduct => product !== null);
 }
 
+async function queryPublishedProducts(): Promise<PublicProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved")
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    console.error("Unable to load the public catalog", error.message);
+    return [];
+  }
+
+  return signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]);
+}
+
 const getPublishedProducts = cache(queryPublishedProducts);
 
-export async function getPublicProducts(options: {
+async function hydrateProductsByIds(supabase: SupabaseClient, ids: string[]): Promise<PublicProduct[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .in("id", ids)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved");
+
+  if (error) {
+    console.error("Unable to hydrate the public catalog page", error.message);
+    return [];
+  }
+
+  const products = await signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]);
+  const rank = new Map(ids.map((id, index) => [id, index]));
+  return products.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+}
+
+export type PublicCatalogQuery = {
   q?: string;
   category?: string;
   sort?: string;
   availability?: "all" | "available";
   min?: number;
   max?: number;
-  limit?: number;
-} = {}) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr");
-  const q = normalize(options.q?.trim() ?? "");
+  page?: number;
+  pageSize?: number;
+};
+
+export type PublicCatalogPage = {
+  products: PublicProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
+const DEFAULT_PAGE_SIZE = 24;
+const eurosToCents = (value: number | undefined) =>
+  value === undefined ? null : Math.round(value * 100);
+
+function normalizeText(value: string) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase("fr");
+}
+
+function legacyFilter(products: PublicProduct[], options: PublicCatalogQuery): PublicProduct[] {
+  const q = normalizeText(options.q?.trim() ?? "");
   const category = options.category?.trim().toLocaleLowerCase("fr") ?? "";
-  const products = (await getPublishedProducts()).filter(
+  const filtered = products.filter(
     (product) =>
       (!category || category === "tous" || product.category.toLocaleLowerCase("fr") === category) &&
-      (!q || normalize(`${product.name} ${product.shop} ${product.category} ${product.description} ${product.verificationSummary}`).includes(q)) &&
+      (!q || normalizeText(`${product.name} ${product.shop} ${product.category} ${product.description} ${product.verificationSummary}`).includes(q)) &&
       (options.availability !== "available" || product.stock > 0) &&
       (options.min === undefined || product.price >= options.min) &&
       (options.max === undefined || product.price <= options.max),
   );
 
-  products.sort((a, b) => {
+  filtered.sort((a, b) => {
     if (options.sort === "prix-asc") return a.price - b.price;
     if (options.sort === "prix-desc") return b.price - a.price;
     return (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "");
   });
 
-  return typeof options.limit === "number" ? products.slice(0, options.limit) : products;
+  return filtered;
+}
+
+// SQL-side search with a graceful fallback while the search migration is not
+// yet applied to the connected Supabase project.
+export async function getPublicCatalogPage(options: PublicCatalogQuery = {}): Promise<PublicCatalogPage> {
+  const pageSize = Math.min(Math.max(options.pageSize ?? DEFAULT_PAGE_SIZE, 1), 48);
+  const page = Math.max(options.page ?? 1, 1);
+  const empty: PublicCatalogPage = { products: [], total: 0, page, pageSize, pageCount: 0 };
+
+  const supabase = createPublicClient();
+  if (!supabase) return empty;
+
+  const { data, error } = await supabase.rpc("search_public_catalog", {
+    requested_query: options.q?.trim() || null,
+    requested_category: options.category ? categoryValue(options.category) : null,
+    requested_min_cents: eurosToCents(options.min),
+    requested_max_cents: eurosToCents(options.max),
+    requested_only_available: options.availability === "available",
+    requested_sort: options.sort ?? "selection",
+    requested_limit: pageSize,
+    requested_offset: (page - 1) * pageSize,
+  });
+
+  if (error) {
+    console.error("Catalog search RPC unavailable, using in-memory fallback", error.message);
+    const filtered = legacyFilter(await getPublishedProducts(), options);
+    const start = (page - 1) * pageSize;
+    return {
+      products: filtered.slice(start, start + pageSize),
+      total: filtered.length,
+      page,
+      pageSize,
+      pageCount: Math.ceil(filtered.length / pageSize),
+    };
+  }
+
+  const rows = (data ?? []) as Array<{ product_id: string; total_count: number }>;
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  const products = await hydrateProductsByIds(supabase, rows.map((row) => row.product_id));
+  return { products, total, page, pageSize, pageCount: Math.ceil(total / pageSize) };
+}
+
+export async function getPublicCategoryCounts(options: Omit<PublicCatalogQuery, "category" | "page" | "pageSize" | "sort"> = {}): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const supabase = createPublicClient();
+  if (!supabase) return counts;
+
+  const { data, error } = await supabase.rpc("count_public_catalog_by_category", {
+    requested_query: options.q?.trim() || null,
+    requested_min_cents: eurosToCents(options.min),
+    requested_max_cents: eurosToCents(options.max),
+    requested_only_available: options.availability === "available",
+  });
+
+  if (error) {
+    console.error("Catalog facet RPC unavailable, using in-memory fallback", error.message);
+    const filtered = legacyFilter(await getPublishedProducts(), { ...options, category: "Tous" });
+    for (const product of filtered) {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+    }
+    counts.set("Tous", filtered.length);
+    return counts;
+  }
+
+  let total = 0;
+  for (const row of (data ?? []) as Array<{ category: string; total: number }>) {
+    counts.set(categoryLabel(row.category), Number(row.total));
+    total += Number(row.total);
+  }
+  counts.set("Tous", total);
+  return counts;
+}
+
+export async function getPublicProducts(options: PublicCatalogQuery & { limit?: number } = {}) {
+  const { products } = await getPublicCatalogPage({
+    ...options,
+    pageSize: options.limit ?? options.pageSize ?? DEFAULT_PAGE_SIZE,
+  });
+  return products;
 }
 
 export async function getPublicProduct(shopSlug: string, productSlug: string) {
-  return (await getPublishedProducts()).find(
-    (product) => product.shopSlug === shopSlug && product.slug === productSlug,
-  ) ?? null;
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .eq("slug", productSlug)
+    .eq("shops.slug", shopSlug)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Unable to load the public product", error.message);
+    return null;
+  }
+  if (!data) return null;
+
+  const [product] = await signAndMap(supabase, [data as unknown as PublicCatalogRow]);
+  return product ?? null;
+}
+
+// Full published catalog (cached per request); reserved for sitemap generation.
+export async function getPublishedProductsForSitemap(limit = 1000): Promise<PublicProduct[]> {
+  return (await getPublishedProducts()).slice(0, limit);
 }
