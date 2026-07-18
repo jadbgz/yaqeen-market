@@ -22,7 +22,14 @@ export type CustomerOrder = {
   totalCents: number;
   currency: string;
   createdAt: string;
-  shops: Array<{ id: string; status: string; subtotalCents: number }>;
+  shops: Array<{
+    id: string;
+    status: string;
+    subtotalCents: number;
+    shopName: string;
+    shippingCarrier: string | null;
+    trackingNumber: string | null;
+  }>;
 };
 
 export async function getCustomerAddresses(): Promise<CustomerAddress[]> {
@@ -55,7 +62,7 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("orders")
-    .select("id,status,total_cents,currency,created_at,shop_orders(id,status,subtotal_cents)")
+    .select("id,status,total_cents,currency,created_at,shop_orders(id,status,subtotal_cents,shipping_carrier,tracking_number,shops(name))")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -69,6 +76,9 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
       id: shop.id,
       status: shop.status,
       subtotalCents: Number(shop.subtotal_cents),
+      shopName: shop.shops?.[0]?.name ?? "Boutique Yaqeen",
+      shippingCarrier: shop.shipping_carrier,
+      trackingNumber: shop.tracking_number,
     })),
   }));
 }
@@ -79,7 +89,7 @@ export async function getCustomerOrder(orderId: string): Promise<CustomerOrder |
   const supabase = await createClient();
   const { data } = await supabase
     .from("orders")
-    .select("id,status,total_cents,currency,created_at,shop_orders(id,status,subtotal_cents)")
+    .select("id,status,total_cents,currency,created_at,shop_orders(id,status,subtotal_cents,shipping_carrier,tracking_number,shops(name))")
     .eq("id", orderId)
     .maybeSingle();
   if (!data) return null;
@@ -93,6 +103,9 @@ export async function getCustomerOrder(orderId: string): Promise<CustomerOrder |
       id: shop.id,
       status: shop.status,
       subtotalCents: Number(shop.subtotal_cents),
+      shopName: shop.shops?.[0]?.name ?? "Boutique Yaqeen",
+      shippingCarrier: shop.shipping_carrier,
+      trackingNumber: shop.tracking_number,
     })),
   };
 }

@@ -15,7 +15,7 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
 - authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
-- CI web, mobile et base, avec 310 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 352 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - Stripe Connect sandbox câblé sur le web : onboarding hébergé, Payment Element, webhook signé et consommation atomique du stock.
 
@@ -25,7 +25,7 @@ Les transferts vendeurs, remboursements, litiges et la livraison restent volonta
 
 ### 1. Domaine commande et stock
 
-État : noyau étendu le 18 juillet 2026. Les tables, RLS, réservation/annulation, adresse figée, expiration et consommation atomique après webhook Stripe signé sont opérationnelles.
+État : noyau étendu le 18 juillet 2026. Réservation, adresse figée, expiration et consommation atomique sont opérationnelles. Le Seller Center traite désormais `paid → preparing → shipped`, recalcule l’agrégat multi-boutique et partage le suivi au client sans exposer les autres vendeurs.
 
 - modéliser la commande client, les sous-commandes par boutique et les lignes au prix figé ;
 - définir une machine à états fermée pour paiement, préparation, expédition, livraison, annulation et remboursement ;

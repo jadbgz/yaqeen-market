@@ -36,7 +36,7 @@ Depuis le 17 juillet, l'application Expo lit le catalogue public Supabase, parta
 ### A-004 — Seller Center non opérationnel
 
 - Chantiers : C11, C17
-- État : partiel au 15 juillet ; création de boutique transactionnelle, rôle vendeur, tableau de bord, liste catalogue et création atomique produit/variante/stock/preuve sont persistés. Édition, commandes et expédition restent ouverts.
+- État : partiel au 18 juillet ; création de boutique, catalogue et médias sont persistés. Les commandes payées sont isolées par boutique et peuvent passer de préparation à expédition avec suivi réel. Le rôle catalogue est exclu des commandes et adresses. Édition produit, livraison confirmée et retours restent ouverts.
 - Sortie attendue : onboarding entreprise, création de boutique, catalogue, variantes, stock, commandes, expédition et retours utilisables sans intervention technique.
 
 ### A-005 — La confiance halal n'est pas un objet métier

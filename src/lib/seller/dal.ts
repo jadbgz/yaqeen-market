@@ -51,6 +51,36 @@ export type SellerProductMedia = {
   signedUrl: string | null;
 };
 
+export type SellerOrder = {
+  id: string;
+  aggregateOrderId: string;
+  status: string;
+  currency: string;
+  totalCents: number;
+  createdAt: string;
+  shippedAt: string | null;
+  shippingCarrier: string | null;
+  trackingNumber: string | null;
+  address: {
+    recipientName: string;
+    line1: string;
+    line2: string | null;
+    postalCode: string;
+    city: string;
+    countryCode: string;
+    phone: string | null;
+  } | null;
+  items: Array<{
+    id: string;
+    productTitle: string;
+    variantTitle: string;
+    sku: string;
+    unitPriceCents: number;
+    quantity: number;
+    lineTotalCents: number;
+  }>;
+};
+
 export const getSellerDashboard = cache(async (): Promise<SellerDashboard | null> => {
   const viewer = await getViewer();
   if (!viewer) return null;
@@ -145,6 +175,60 @@ export const getSellerPaymentState = cache(async () => {
     requirementsDue: data?.requirements_due_count ?? 0,
     lastSyncedAt: data?.last_synced_at ?? null,
   };
+});
+
+export const getSellerOrders = cache(async (): Promise<SellerOrder[] | null> => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("shop_orders")
+    .select("id,order_id,status,currency,total_cents,created_at,shipped_at,shipping_carrier,tracking_number,order_items(id,product_title,variant_title,sku,unit_price_cents,quantity,line_total_cents)")
+    .eq("shop_id", dashboard.shop.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const orderIds = [...new Set((data ?? []).map((order) => order.order_id))];
+  const { data: addresses } = orderIds.length > 0
+    ? await supabase
+      .from("order_shipping_addresses")
+      .select("order_id,recipient_name,line1,line2,postal_code,city,country_code,phone")
+      .in("order_id", orderIds)
+    : { data: [] };
+  const addressByOrderId = new Map((addresses ?? []).map((address) => [address.order_id, address]));
+
+  return (data ?? []).map((order) => {
+    const address = addressByOrderId.get(order.order_id);
+    return {
+      id: order.id,
+      aggregateOrderId: order.order_id,
+      status: order.status,
+      currency: order.currency,
+      totalCents: Number(order.total_cents),
+      createdAt: order.created_at,
+      shippedAt: order.shipped_at,
+      shippingCarrier: order.shipping_carrier,
+      trackingNumber: order.tracking_number,
+      address: address ? {
+        recipientName: address.recipient_name,
+        line1: address.line1,
+        line2: address.line2,
+        postalCode: address.postal_code,
+        city: address.city,
+        countryCode: address.country_code,
+        phone: address.phone,
+      } : null,
+      items: (order.order_items ?? []).map((item) => ({
+        id: item.id,
+        productTitle: item.product_title,
+        variantTitle: item.variant_title,
+        sku: item.sku,
+        unitPriceCents: item.unit_price_cents,
+        quantity: item.quantity,
+        lineTotalCents: Number(item.line_total_cents),
+      })),
+    };
+  });
 });
 
 export const getSellerProducts = cache(async (): Promise<SellerProduct[] | null> => {

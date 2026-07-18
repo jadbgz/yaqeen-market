@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 const disabledNavigation = [
-  ["□", "Commandes"], ["◫", "Stock"],
+  ["◫", "Stock"],
   ["↗", "Expéditions"], ["◉", "Statistiques"], ["€", "Paiements"], ["✓", "Conformité"],
 ] as const;
 
@@ -20,7 +20,7 @@ export function SellerChrome({ shopName, shopStatus, userName, activeRoute = "ov
   shopName: string;
   shopStatus: keyof typeof statusLabels;
   userName: string;
-  activeRoute?: "overview" | "products";
+  activeRoute?: "overview" | "products" | "orders";
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,7 +32,7 @@ export function SellerChrome({ shopName, shopStatus, userName, activeRoute = "ov
       <aside className={`seller-sidebar ${menuOpen ? "open" : ""}`}>
         <Link href="/" className="seller-logo">yaqeen<span>✦</span><small>seller</small></Link>
         <div className="seller-store"><div className="seller-avatar">{initials}</div><div><strong>{shopName}</strong><span>{statusLabels[shopStatus]}</span></div></div>
-        <nav><Link href="/seller" className={activeRoute === "overview" ? "active" : ""} onClick={() => setMenuOpen(false)}><i>⌂</i><span>Vue d’ensemble</span></Link><Link href="/seller/produits" className={activeRoute === "products" ? "active" : ""} onClick={() => setMenuOpen(false)}><i>◇</i><span>Produits</span></Link>{disabledNavigation.map(([icon, label]) => <span className="seller-nav-disabled" aria-disabled="true" key={label}><i>{icon}</i><span>{label}</span><small>À venir</small></span>)}</nav>
+        <nav><Link href="/seller" className={activeRoute === "overview" ? "active" : ""} onClick={() => setMenuOpen(false)}><i>⌂</i><span>Vue d’ensemble</span></Link><Link href="/seller/produits" className={activeRoute === "products" ? "active" : ""} onClick={() => setMenuOpen(false)}><i>◇</i><span>Produits</span></Link><Link href="/seller/commandes" className={activeRoute === "orders" ? "active" : ""} onClick={() => setMenuOpen(false)}><i>□</i><span>Commandes</span></Link>{disabledNavigation.map(([icon, label]) => <span className="seller-nav-disabled" aria-disabled="true" key={label}><i>{icon}</i><span>{label}</span><small>À venir</small></span>)}</nav>
         <div className="seller-side-bottom"><Link href="/compte"><i>⚙</i><span>Mon compte</span></Link><Link href="/catalogue"><i>↙</i><span>Voir la marketplace</span></Link></div>
       </aside>
       <section className="seller-main">

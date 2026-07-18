@@ -10,6 +10,7 @@ Les informations commerciales, le pipeline de prospection, les hypothèses de pr
 - `architecture/ADR-008-universal-public-catalog.md` : convergence Expo iOS/Android/web vers le même catalogue public.
 - `architecture/ADR-009-secure-order-reservations.md` : agrégat client, sous-commandes vendeur, snapshots et réservation atomique du stock.
 - `architecture/ADR-010-stripe-connect-funds-flow.md` : comptes connectés, paiement plateforme, transferts séparés, webhooks et responsabilité financière.
+- `architecture/ADR-013-seller-fulfillment-state-machine.md` : traitement vendeur, agrégat multi-boutique, suivi et protection des adresses.
 - `architecture/ADR-011-private-product-media.md` : stockage privé, normalisation WebP, modération atomique et diffusion signée commune au web et au mobile.
 - `architecture/ADR-012-customer-account-lifecycle.md` : adresses privées, snapshots de livraison, récupération et suppression différée.
 - `architecture/ADR-001-surfaces-web-mobile.md` : répartition des responsabilités entre web, mobile, Seller Center et back-office.
