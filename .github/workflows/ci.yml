@@ -57,5 +57,6 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - run: npx expo customize tsconfig.json
       - run: npx tsc --noEmit
       - run: npx expo export --platform web

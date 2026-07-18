@@ -15,6 +15,8 @@ Le compte client repose sur quatre frontières distinctes :
 
 L'interface de récupération retourne toujours le même message afin de ne pas révéler si une adresse e-mail possède un compte. Un changement volontaire de mot de passe exige le mot de passe actuel. Le lien de récupération constitue son propre parcours et doit produire une session valide avant d'autoriser la mise à jour.
 
+Expo utilise le même projet Supabase et les mêmes RPC/RLS. Sur iOS et Android, le payload de session est fragmenté puis chiffré dans Keychain/Keystore avec `expo-secure-store` ; les fragments sont limités et la session n'est accessible que sur l'appareil déverrouillé. Le client web Expo utilise `localStorage`, conformément à son modèle de plateforme. Les liens e-mail reviennent par le schéma `yaqeen://auth/callback`, échangent le code PKCE, puis distinguent la méthode JWT `recovery` d'une confirmation d'inscription.
+
 ## Suppression et conservation
 
 Le navigateur n'obtient jamais de clé d'administration et ne supprime jamais directement un utilisateur Auth. Une demande ne vaut donc pas suppression immédiate. Le traitement final sera exécuté par un worker de confiance après application d'une matrice de conservation couvrant :
@@ -39,7 +41,7 @@ Ce mécanisme technique ne constitue pas, à lui seul, une validation juridique 
 
 ## Limites assumées
 
-- l'application Expo ne partage pas encore l'authentification et le compte ;
 - aucune suppression Auth finale n'est automatisée avant validation de la conservation ;
 - aucun transporteur ou tarif de livraison n'est encore sélectionné ;
 - les tests E2E du lien e-mail nécessitent un environnement Auth dédié.
+- les URL `yaqeen://auth/callback` et web de production doivent être ajoutées explicitement à la liste de redirection Supabase avant distribution.

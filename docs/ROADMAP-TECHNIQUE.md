@@ -14,6 +14,7 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - écritures sensibles exclusivement par RPC métier ;
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
+- authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
 - CI web, mobile et base, avec 289 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - architecture Stripe Connect décidée et registre pré-réseau livré pour comptes connectés, tentatives, transferts et webhooks dédupliqués.
@@ -62,7 +63,7 @@ Critère de sortie : aucun produit publiable sans média approuvé, accessible e
 
 ### 4. Cycle produit et compte client
 
-État compte : carnet d'adresses RPC-only, historique réel, récupération et changement de mot de passe, ainsi que demande de suppression réversible à 30 jours livrés le 18 juillet 2026. La suppression finale reste volontairement réservée à un worker de confiance appliquant la politique de conservation.
+État compte : carnet d'adresses RPC-only, historique réel, récupération et changement de mot de passe, ainsi que demande de suppression réversible à 30 jours livrés sur le web et Expo le 18 juillet 2026. Sur iOS/Android, la session est conservée dans Keychain/Keystore via SecureStore. La suppression finale reste volontairement réservée à un worker de confiance appliquant la politique de conservation.
 
 - permettre l'édition d'un brouillon et le retour en brouillon après rejet ;
 - prendre en charge plusieurs variantes et plusieurs preuves ;
@@ -114,7 +115,8 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Phase 4 — Distribution mobile et passage à l'échelle
 
-- partager authentification, panier, commandes et checkout entre Expo et le web ;
+- [x] partager authentification, compte, adresses et historique de commandes entre Expo et le web ;
+- [ ] partager la commande et le checkout après activation du paiement ;
 - ajouter les notifications push transactionnelles ;
 - valider les exigences App Store et Play Store, puis publier sur les deux stores ;
 - instrumenter le funnel réel sans inventer de métriques ;
@@ -126,7 +128,7 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 2. édition des fiches, variantes multiples et expiration des preuves ;
 3. adaptateur Stripe en mode test, Account Links et handler webhook signé ;
 4. branchement du checkout uniquement après validation des webhooks et de la consommation du stock ;
-5. partage de l'authentification et du compte client avec Expo.
+5. tests E2E des liens Auth web/mobile et configuration des domaines de redirection de production.
 
 ## Garde-fous permanents
 
