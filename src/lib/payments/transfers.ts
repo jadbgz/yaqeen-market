@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getViewer } from "@/lib/auth/dal";
+import { recoverWithdrawnDisputesForPaymentTransfer } from "@/lib/payments/disputes";
 import { getStripe } from "@/lib/payments/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -64,6 +65,7 @@ export async function releaseSellerTransfer(shopOrderId: string) {
       requested_destination_account_id: destination,
     });
     if (completionError) throw Object.assign(new Error(completionError.message), { code: completionError.code });
+    await recoverWithdrawnDisputesForPaymentTransfer(prepared.payment_transfer_id);
     return { status: "submitted", transferId: prepared.payment_transfer_id };
   } catch (error) {
     await admin.rpc("record_payment_transfer_error", {

@@ -19,6 +19,21 @@ export type OperationsOrder = {
   refund: { status: string; amountCents: number; providerId: string | null; errorCode: string | null } | null;
 };
 
+export type OperationsDispute = {
+  id: string;
+  providerId: string;
+  orderId: string;
+  status: string;
+  fundsStatus: string;
+  recoveryStatus: string;
+  reasonCode: string;
+  amountCents: number;
+  currency: string;
+  evidenceDueAt: string | null;
+  hasEvidence: boolean;
+  submissionCount: number;
+};
+
 export const getOperationsOrders = cache(async (): Promise<OperationsOrder[] | null> => {
   const viewer = await getViewer();
   if (!viewer || (viewer.role !== "operator" && viewer.role !== "admin")) return null;
@@ -58,4 +73,30 @@ export const getOperationsOrders = cache(async (): Promise<OperationsOrder[] | n
       } : null,
     };
   });
+});
+
+export const getOperationsDisputes = cache(async (): Promise<OperationsDispute[] | null> => {
+  const viewer = await getViewer();
+  if (!viewer || (viewer.role !== "operator" && viewer.role !== "admin")) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payment_disputes")
+    .select("id,provider_dispute_id,status,funds_status,recovery_status,reason_code,amount_cents,currency,evidence_due_at,has_evidence,submission_count,payment_attempts(order_id)")
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) return null;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    providerId: row.provider_dispute_id,
+    orderId: row.payment_attempts?.[0]?.order_id ?? "",
+    status: row.status,
+    fundsStatus: row.funds_status,
+    recoveryStatus: row.recovery_status,
+    reasonCode: row.reason_code,
+    amountCents: Number(row.amount_cents),
+    currency: row.currency,
+    evidenceDueAt: row.evidence_due_at,
+    hasEvidence: row.has_evidence,
+    submissionCount: Number(row.submission_count),
+  }));
 });

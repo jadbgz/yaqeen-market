@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripeTestConfig } from "@/lib/payments/config";
+import { recoverSellerTransfersForDispute } from "@/lib/payments/disputes";
 import { getStripe } from "@/lib/payments/stripe";
 import { reverseSellerTransferForRefund } from "@/lib/payments/refunds";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -17,6 +18,11 @@ const HANDLED_EVENTS = new Set([
   "refund.created",
   "refund.updated",
   "refund.failed",
+  "charge.dispute.created",
+  "charge.dispute.updated",
+  "charge.dispute.closed",
+  "charge.dispute.funds_withdrawn",
+  "charge.dispute.funds_reinstated",
 ]);
 
 function stripeState(intent: Stripe.PaymentIntent) {
@@ -89,7 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "event_claim_failed" }, { status: 500 });
   }
 
-  if (!HANDLED_EVENTS.has(event.type) || (!objectId?.startsWith("pi_") && !objectId?.startsWith("re_"))) {
+  if (!HANDLED_EVENTS.has(event.type) || (!objectId?.startsWith("pi_") && !objectId?.startsWith("re_") && !objectId?.startsWith("du_"))) {
     await admin.rpc("complete_stripe_webhook_event", {
       requested_provider_event_id: event.id,
       requested_outcome: "ignored",
@@ -99,6 +105,52 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (objectId.startsWith("du_")) {
+      const dispute = await stripe.disputes.retrieve(objectId);
+      const providerChargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
+      const fundsAction = event.type === "charge.dispute.funds_withdrawn"
+        ? "withdrawn"
+        : event.type === "charge.dispute.funds_reinstated" ? "reinstated" : "none";
+      const { data: localDisputeId, error: disputeError } = await admin.rpc("apply_stripe_dispute_snapshot", {
+        requested_provider_event_id: event.id,
+        requested_event_type: event.type,
+        requested_provider_dispute_id: dispute.id,
+        requested_provider_charge_id: providerChargeId,
+        requested_status: dispute.status,
+        requested_funds_action: fundsAction,
+        requested_reason_code: dispute.reason,
+        requested_amount_cents: dispute.amount,
+        requested_currency: dispute.currency,
+        requested_evidence_due_epoch: dispute.evidence_details.due_by || null,
+        requested_has_evidence: dispute.evidence_details.has_evidence,
+        requested_evidence_past_due: dispute.evidence_details.past_due,
+        requested_submission_count: dispute.evidence_details.submission_count,
+        requested_is_charge_refundable: dispute.is_charge_refundable,
+        requested_opened_epoch: dispute.created,
+      });
+      if (disputeError || typeof localDisputeId !== "string") {
+        throw Object.assign(new Error(disputeError?.message ?? "dispute_snapshot_failed"), { code: disputeError?.code });
+      }
+      if (fundsAction === "withdrawn") {
+        const { data: currentDispute, error: currentDisputeError } = await admin
+          .from("payment_disputes")
+          .select("funds_status")
+          .eq("id", localDisputeId)
+          .single();
+        if (currentDisputeError) throw currentDisputeError;
+        if (currentDispute.funds_status === "withdrawn") {
+          await recoverSellerTransfersForDispute(localDisputeId);
+        }
+      }
+      const { error: completeDisputeEventError } = await admin.rpc("complete_stripe_webhook_event", {
+        requested_provider_event_id: event.id,
+        requested_outcome: "processed",
+        requested_error_code: null,
+      });
+      if (completeDisputeEventError) throw completeDisputeEventError;
+      return NextResponse.json({ received: true });
+    }
+
     if (objectId.startsWith("re_")) {
       const refund = await stripe.refunds.retrieve(objectId);
       const localRefundId = refund.metadata?.yaqeen_payment_refund_id;

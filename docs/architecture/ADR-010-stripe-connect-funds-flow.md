@@ -35,7 +35,7 @@ Le code devra utiliser les propriétés de contrôleur stables disponibles sur l
 2. Une tentative locale est créée avec le total serveur et une clé d'idempotence stable.
 3. Le serveur crée un PaymentIntent Stripe sur le compte plateforme avec la même clé et un `transfer_group` dérivé de la commande.
 4. Le client confirme avec Payment Element ou Payment Sheet. Le `client_secret` n'est jamais journalisé, stocké dans une URL ou communiqué à un autre client.
-5. Le webhook signé est dédupliqué puis récupère l'objet Stripe à jour avant toute transition.
+5. Le webhook signé est dédupliqué puis récupère l'objet Stripe à jour avant toute transition ; la même frontière s'applique aux remboursements et litiges.
 6. Après succès, la réservation devient stock consommé et la commande devient `paid` dans une même frontière métier.
 7. Un transfert idempotent sera créé par sous-commande uniquement lorsque la politique de libération vendeur sera satisfaite. Cette dernière étape reste fermée dans le lot sandbox actuel.
 
@@ -108,7 +108,7 @@ Conséquences :
 
 ## État d'implémentation au 18 juillet 2026
 
-Le bac à sable web est câblé : SDK serveur et Payment Element, Account Links hébergés, PaymentIntent calculé côté serveur, webhook signé et dédupliqué, puis consommation atomique de la réservation et transition vers `paid`. La livraison opérateur ouvre un transfert test idempotent par sous-commande. Un remboursement intégral peut être demandé par un opérateur ; son webhook signé applique l’état puis orchestre le reversal du net vendeur si nécessaire. Les clés live et événements live sont explicitement rejetés.
+Le bac à sable web est câblé : SDK serveur et Payment Element, Account Links hébergés, PaymentIntent calculé côté serveur, webhook signé et dédupliqué, puis consommation atomique de la réservation et transition vers `paid`. La livraison opérateur ouvre un transfert test idempotent par sous-commande. Un remboursement intégral peut être demandé par un opérateur ; son webhook signé applique l’état puis orchestre le reversal du net vendeur si nécessaire. Les litiges gèlent les transferts ; un retrait total de la charge récupère automatiquement les nets vendeurs, tandis qu'un retrait partiel impose une allocation opérateur. Les clés live et événements live sont explicitement rejetés.
 
 Restent fermés avant une vente réelle :
 

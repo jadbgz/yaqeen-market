@@ -15,7 +15,7 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
 - authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
-- CI web, mobile et base, avec 433 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 485 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - Stripe Connect sandbox câblé sur le web : onboarding hébergé, Payment Element, webhook signé et consommation atomique du stock.
 
@@ -37,7 +37,7 @@ Critère de sortie : aucune lecture inter-boutiques, aucune transition de statut
 
 ### 2. Paiement marketplace
 
-État : pilote web Stripe test étendu le 19 juillet 2026. Le vendeur utilise un Account Link hébergé ; le client réserve puis confirme avec Payment Element ; seuls les webhooks signés appliquent les états financiers asynchrones. Livraison, transfert, remboursement intégral par sous-commande et reversal sont rapprochés en sandbox. Les litiges et remboursements partiels restent fermés.
+État : pilote web Stripe test étendu le 19 juillet 2026. Le vendeur utilise un Account Link hébergé ; le client réserve puis confirme avec Payment Element ; seuls les webhooks signés appliquent les états financiers asynchrones. Livraison, transfert, remboursement intégral par sous-commande, reversal et protection contre les litiges sont rapprochés en sandbox. Les remboursements partiels et la soumission automatisée des preuves restent fermés.
 
 - documenter Stripe Connect Express dans un nouvel ADR ; `ADR-005` est déjà attribué à la fermeture des écritures catalogue directes ;
 - déléguer KYC/KYB, reversements et exigences de paiement à Stripe ;
