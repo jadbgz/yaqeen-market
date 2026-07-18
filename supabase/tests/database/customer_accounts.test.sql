@@ -23,9 +23,9 @@ select policies_are('public', 'customer_addresses', array['customer_addresses_ow
 select policies_are('public', 'order_shipping_addresses', array['order_shipping_addresses_party_read']);
 select policies_are('public', 'account_deletion_requests', array['account_deletion_owner_or_operator_read']);
 
-select has_index('public', 'customer_addresses', 'customer_addresses_one_default_idx');
-select has_index('public', 'customer_addresses', 'customer_addresses_customer_idx');
-select has_index('public', 'account_deletion_requests', 'account_deletion_one_pending_idx');
+select has_index('public', 'customer_addresses', 'customer_addresses_one_default_idx', 'one default address is enforced by index');
+select has_index('public', 'customer_addresses', 'customer_addresses_customer_idx', 'customer address lookup is indexed');
+select has_index('public', 'account_deletion_requests', 'account_deletion_one_pending_idx', 'one pending deletion is enforced by index');
 
 select results_eq(
   $$ select has_table_privilege('authenticated', 'public.customer_addresses', 'INSERT') $$,
@@ -113,6 +113,10 @@ select results_eq(
   'the first address is trimmed, normalized and defaulted server-side'
 );
 
+update public.customer_addresses
+set id = '31000000-0000-4000-8000-000000000001'
+where customer_id = '30000000-0000-0000-0000-000000000001' and label = 'Domicile';
+
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"30000000-0000-0000-0000-000000000001","role":"authenticated"}';
 select lives_ok(
@@ -139,7 +143,7 @@ select results_eq(
 );
 select throws_ok(
   $$ select public.save_customer_address(
-    (select id from public.customer_addresses where label = 'Domicile'),
+    '31000000-0000-4000-8000-000000000001',
     'Vol', 'Intrus', '1 rue Interdite', null, '75001', 'Paris', 'FR', null, false
   ) $$,
   '42501', 'address_ownership_required',
