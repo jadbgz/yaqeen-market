@@ -10,14 +10,19 @@ const devConnect = isDev ? ["http://127.0.0.1:54321", "ws://127.0.0.1:54321", "h
 // Inline scripts/styles stay allowed for now: Next.js bootstraps hydration with
 // inline scripts and the design relies on inline style attributes. Tightening
 // to nonces is a follow-up that requires emitting a nonce from src/proxy.ts.
+// Stripe directives follow https://docs.stripe.com/security/guide (Stripe.js +
+// Link, which is enabled by default in the Payment Element). m.stripe.network
+// and merchant-ui-api.stripe.com are kept for fraud-signal and element frames.
+// Any change here must be re-validated with a browser smoke test of the
+// Payment Element in an environment with Stripe test keys.
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://*.js.stripe.com`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.supabase.co${isDev ? " http://127.0.0.1:54321 http://localhost:54321" : ""}`,
+  `img-src 'self' data: blob: https://*.supabase.co https://*.stripe.com https://*.link.com${isDev ? " http://127.0.0.1:54321 http://localhost:54321" : ""}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://api.stripe.com https://merchant-ui-api.stripe.com https://m.stripe.network ${[...supabaseConnect, ...devConnect].join(" ")}`,
-  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://m.stripe.network",
+  `connect-src 'self' https://api.stripe.com https://merchant-ui-api.stripe.com https://m.stripe.network https://link.com https://*.link.com ${[...supabaseConnect, ...devConnect].join(" ")}`,
+  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://m.stripe.network https://link.com https://*.link.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

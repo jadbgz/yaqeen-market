@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(24);
+select plan(26);
 
 -- Structure and privileges -------------------------------------------------
 
@@ -63,36 +63,41 @@ insert into public.products (id, shop_id, slug, title, description, category, st
   ('62000000-0000-0000-0000-000000000002', '61000000-0000-0000-0000-000000000001', 'savon-royal', 'Savon royal', 'Savon surgras artisanal.', 'cosmetiques', 'published', now() - interval '1 day'),
   ('62000000-0000-0000-0000-000000000003', '61000000-0000-0000-0000-000000000001', 'brouillon-cache', 'Brouillon caché', 'Ne doit jamais sortir dans la recherche.', 'parfums', 'draft', null),
   ('62000000-0000-0000-0000-000000000004', '61000000-0000-0000-0000-000000000001', 'sans-media', 'Sans média', 'Publié mais sans média approuvé.', 'parfums', 'published', now()),
-  ('62000000-0000-0000-0000-000000000005', '61000000-0000-0000-0000-000000000002', 'huile-argan', 'Huile précieuse', 'Huile pressée à froid.', 'bien-etre', 'published', now() - interval '3 days');
+  ('62000000-0000-0000-0000-000000000005', '61000000-0000-0000-0000-000000000002', 'huile-argan', 'Huile précieuse', 'Huile pressée à froid.', 'bien-etre', 'published', now() - interval '3 days'),
+  ('62000000-0000-0000-0000-000000000006', '61000000-0000-0000-0000-000000000001', 'cape-reversible', 'Cape réversible', 'Une cape modeste à deux faces.', 'mode', 'published', now() - interval '4 days');
 
 insert into public.product_variants (id, product_id, sku, title, price_cents, currency, stock_on_hand, stock_reserved, active) values
   ('63000000-0000-0000-0000-000000000001', '62000000-0000-0000-0000-000000000001', 'SEARCH-MUSC-01', '50 ml', 3490, 'EUR', 10, 0, true),
   ('63000000-0000-0000-0000-000000000002', '62000000-0000-0000-0000-000000000002', 'SEARCH-SAVON-01', '100 g', 890, 'EUR', 0, 0, true),
   ('63000000-0000-0000-0000-000000000003', '62000000-0000-0000-0000-000000000003', 'SEARCH-DRAFT-01', '50 ml', 2000, 'EUR', 5, 0, true),
   ('63000000-0000-0000-0000-000000000004', '62000000-0000-0000-0000-000000000004', 'SEARCH-NOMEDIA-01', '30 ml', 1500, 'EUR', 5, 0, true),
-  ('63000000-0000-0000-0000-000000000005', '62000000-0000-0000-0000-000000000005', 'SEARCH-ARGAN-01', '30 ml', 2190, 'EUR', 3, 0, true);
+  ('63000000-0000-0000-0000-000000000005', '62000000-0000-0000-0000-000000000005', 'SEARCH-ARGAN-01', '30 ml', 2190, 'EUR', 3, 0, true),
+  ('63000000-0000-0000-0000-000000000006', '62000000-0000-0000-0000-000000000006', 'SEARCH-CAPE-S', 'Taille S', 1000, 'EUR', 0, 0, true),
+  ('63000000-0000-0000-0000-000000000007', '62000000-0000-0000-0000-000000000006', 'SEARCH-CAPE-M', 'Taille M', 2000, 'EUR', 4, 0, true);
 
 insert into public.product_evidence (product_id, kind, status, scope, public_summary, submitted_by, reviewed_by, reviewed_at) values
   ('62000000-0000-0000-0000-000000000001', 'seller_declaration', 'approved', 'Composition sans alcool vérifiée sur déclaration.', 'Composition sans alcool vérifiée par la revue Yaqeen.', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now()),
   ('62000000-0000-0000-0000-000000000002', 'seller_declaration', 'approved', 'Composition savon vérifiée sur déclaration.', 'Composition contrôlée par la revue Yaqeen.', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now()),
   ('62000000-0000-0000-0000-000000000004', 'seller_declaration', 'approved', 'Preuve approuvée mais média manquant.', 'Preuve approuvée mais média manquant.', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now()),
-  ('62000000-0000-0000-0000-000000000005', 'seller_declaration', 'approved', 'Pression à froid documentée par le vendeur.', 'Origine documentée et revue par Yaqeen.', '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', now());
+  ('62000000-0000-0000-0000-000000000005', 'seller_declaration', 'approved', 'Pression à froid documentée par le vendeur.', 'Origine documentée et revue par Yaqeen.', '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', now()),
+  ('62000000-0000-0000-0000-000000000006', 'seller_declaration', 'approved', 'Tissu opaque documenté par la créatrice.', 'Matière contrôlée par la revue Yaqeen.', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now());
 
 insert into public.product_media (product_id, storage_path, position, alt_text, mime_type, byte_size, width, height, status, submitted_by, reviewed_by, reviewed_at) values
   ('62000000-0000-0000-0000-000000000001', '61000000-0000-0000-0000-000000000001/63000000-0000-0000-0000-0000000000a1.webp', 1, 'Flacon de musc léger', 'image/webp', 120000, 1200, 1200, 'approved', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now()),
   ('62000000-0000-0000-0000-000000000002', '61000000-0000-0000-0000-000000000001/63000000-0000-0000-0000-0000000000a2.webp', 1, 'Savon royal artisanal', 'image/webp', 120000, 1200, 1200, 'approved', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now()),
-  ('62000000-0000-0000-0000-000000000005', '61000000-0000-0000-0000-000000000002/63000000-0000-0000-0000-0000000000a5.webp', 1, 'Flacon d''huile précieuse', 'image/webp', 120000, 1200, 1200, 'approved', '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', now());
+  ('62000000-0000-0000-0000-000000000005', '61000000-0000-0000-0000-000000000002/63000000-0000-0000-0000-0000000000a5.webp', 1, 'Flacon d''huile précieuse', 'image/webp', 120000, 1200, 1200, 'approved', '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', now()),
+  ('62000000-0000-0000-0000-000000000006', '61000000-0000-0000-0000-000000000001/63000000-0000-0000-0000-0000000000a6.webp', 1, 'Cape réversible portée', 'image/webp', 120000, 1200, 1200, 'approved', '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', now());
 
 -- Behaviour ------------------------------------------------------------------
 
 select results_eq(
   $$ select count(*)::bigint from public.search_public_catalog() $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'only fully publishable products are searchable (draft and media-less excluded)'
 );
 select results_eq(
   $$ select distinct total_count from public.search_public_catalog() $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'the window total matches the number of visible products'
 );
 select results_eq(
@@ -117,7 +122,7 @@ select results_eq(
 );
 select results_eq(
   $$ select count(*)::bigint from public.search_public_catalog(requested_only_available => true) $$,
-  $$ values (2::bigint) $$,
+  $$ values (3::bigint) $$,
   'availability filter removes out-of-stock products'
 );
 select results_eq(
@@ -137,12 +142,12 @@ select results_eq(
 );
 select results_eq(
   $$ select count(*)::bigint from public.search_public_catalog(requested_limit => 2, requested_offset => 2) $$,
-  $$ values (1::bigint) $$,
+  $$ values (2::bigint) $$,
   'offset pagination returns the remaining page'
 );
 select results_eq(
   $$ select count(*)::bigint from public.search_public_catalog(requested_limit => 100000) $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'page size is capped without erroring on oversized requests'
 );
 select results_eq(
@@ -152,8 +157,19 @@ select results_eq(
 );
 select results_eq(
   $$ select count(*)::bigint from public.count_public_catalog_by_category() $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'facet counts cover exactly the categories with visible products'
+);
+
+select results_eq(
+  $$ select variant_id from public.search_public_catalog(requested_query => 'reversible') $$,
+  $$ values ('63000000-0000-0000-0000-000000000006'::uuid) $$,
+  'without the stock filter the cheapest active variant qualifies and is returned'
+);
+select results_eq(
+  $$ select variant_id from public.search_public_catalog(requested_query => 'reversible', requested_only_available => true) $$,
+  $$ values ('63000000-0000-0000-0000-000000000007'::uuid) $$,
+  'with the stock filter the returned variant is exactly the one that satisfied it'
 );
 
 -- Anonymous execution path (invoker rights + RLS) -----------------------------
@@ -161,7 +177,7 @@ select results_eq(
 set local role anon;
 select results_eq(
   $$ select count(*)::bigint from public.search_public_catalog() $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'anonymous visitors get the same audited catalog through RLS'
 );
 select is_empty(

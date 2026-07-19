@@ -27,6 +27,9 @@ create index products_public_search_trgm_idx
   on public.products
   using gin (public.searchable_text(title || ' ' || coalesce(description, '')) extensions.gin_trgm_ops);
 
+-- The function returns the exact variant that qualified the product (cheapest
+-- variant satisfying every filter) so the storefront prices, stock badges and
+-- filters can never disagree with the search decision.
 create or replace function public.search_public_catalog(
   requested_query text default null,
   requested_category text default null,
@@ -37,7 +40,7 @@ create or replace function public.search_public_catalog(
   requested_limit integer default 24,
   requested_offset integer default 0
 )
-returns table (product_id uuid, total_count bigint)
+returns table (product_id uuid, variant_id uuid, total_count bigint)
 language sql
 stable
 set search_path = ''
@@ -46,29 +49,32 @@ as $$
     select
       least(greatest(coalesce(requested_limit, 24), 1), 48) as page_size,
       least(greatest(coalesce(requested_offset, 0), 0), 100000) as page_offset,
-      nullif(public.searchable_text(requested_query), '') as needle,
+      -- Zod bounds the query to 80 characters in the web tier, but the RPC is
+      -- publicly callable so the same bound is enforced here.
+      nullif(public.searchable_text(left(requested_query, 80)), '') as needle,
       nullif(lower(trim(requested_category)), '') as category_filter,
       case when requested_sort in ('selection', 'prix-asc', 'prix-desc') then requested_sort else 'selection' end as sort_key
   ),
   visible as (
-    select p.id, p.published_at, pricing.min_price_cents
+    select p.id, p.published_at, chosen.variant_id, chosen.price_cents
     from public.products p
     join public.shops s on s.id = p.shop_id and s.status = 'approved'
     cross join bounds b
     cross join lateral (
-      select min(pv.price_cents) as min_price_cents
+      select pv.id as variant_id, pv.price_cents
       from public.product_variants pv
       where pv.product_id = p.id
         and pv.active
         and pv.price_cents > 0
         and (not coalesce(requested_only_available, false)
              or pv.stock_on_hand - pv.stock_reserved > 0)
-    ) pricing
+      order by pv.price_cents asc, pv.id
+      limit 1
+    ) chosen
     where p.status = 'published'
-      and pricing.min_price_cents is not null
       and (b.category_filter is null or p.category = b.category_filter)
-      and (requested_min_cents is null or pricing.min_price_cents >= requested_min_cents)
-      and (requested_max_cents is null or pricing.min_price_cents <= requested_max_cents)
+      and (requested_min_cents is null or chosen.price_cents >= requested_min_cents)
+      and (requested_max_cents is null or chosen.price_cents <= requested_max_cents)
       and exists (
         select 1 from public.product_evidence e
         where e.product_id = p.id and e.status = 'approved' and e.public_summary is not null
@@ -83,12 +89,12 @@ as $$
         or public.searchable_text(s.name) like '%' || b.needle || '%'
       )
   )
-  select v.id as product_id, count(*) over () as total_count
+  select v.id as product_id, v.variant_id, count(*) over () as total_count
   from visible v
   cross join bounds b
   order by
-    case when b.sort_key = 'prix-asc' then v.min_price_cents end asc,
-    case when b.sort_key = 'prix-desc' then v.min_price_cents end desc,
+    case when b.sort_key = 'prix-asc' then v.price_cents end asc,
+    case when b.sort_key = 'prix-desc' then v.price_cents end desc,
     v.published_at desc nulls last,
     v.id
   limit (select page_size from bounds)
@@ -107,7 +113,7 @@ stable
 set search_path = ''
 as $$
   with bounds as (
-    select nullif(public.searchable_text(requested_query), '') as needle
+    select nullif(public.searchable_text(left(requested_query, 80)), '') as needle
   )
   select p.category, count(*)::bigint as total
   from public.products p
