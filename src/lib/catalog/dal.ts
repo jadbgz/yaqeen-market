@@ -77,7 +77,9 @@ function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string
   const shop = row.shops;
   // The SQL search decides which variant qualified the product; the storefront
   // must show that exact variant so price and stock never contradict filters.
-  const variant = (preferredVariantId && eligibleVariants.find((item) => item.id === preferredVariantId)) || eligibleVariants[0];
+  const variant = (preferredVariantId && eligibleVariants.find((item) => item.id === preferredVariantId))
+    || eligibleVariants.find((item) => item.stock_on_hand - item.stock_reserved > 0)
+    || eligibleVariants[0];
   const evidence = row.product_evidence.find(
     (item) => item.status === "approved" && item.public_summary,
   );
@@ -292,11 +294,15 @@ export async function getPublicCatalogPage(options: PublicCatalogQuery = {}): Pr
   let total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   if (rows.length === 0 && page > 1) {
     // Out-of-range page: recover the real total so pagination stays correct.
-    const { data: probe } = await supabase.rpc("search_public_catalog", {
+    const { data: probe, error: probeError } = await supabase.rpc("search_public_catalog", {
       ...rpcArgs,
       requested_limit: 1,
       requested_offset: 0,
     });
+    if (probeError) {
+      console.error("Catalog total probe failed", probeError.code, probeError.message);
+      throw new Error(`Catalog total probe failed: ${probeError.message}`);
+    }
     const probeRows = (probe ?? []) as Array<{ total_count: number }>;
     total = probeRows.length > 0 ? Number(probeRows[0].total_count) : 0;
   }
@@ -349,7 +355,7 @@ export async function getPublicProducts(options: PublicCatalogQuery & { limit?: 
   return products;
 }
 
-export async function getPublicProduct(shopSlug: string, productSlug: string) {
+export async function getPublicProduct(shopSlug: string, productSlug: string, preferredVariantId?: string) {
   const supabase = createPublicClient();
   if (!supabase) return null;
 
@@ -371,7 +377,14 @@ export async function getPublicProduct(shopSlug: string, productSlug: string) {
   }
   if (!data) return null;
 
-  const [product] = await signAndMap(supabase, [data as unknown as PublicCatalogRow]);
+  const preferredVariantByProduct = preferredVariantId
+    ? new Map([[data.id, preferredVariantId]])
+    : undefined;
+  const [product] = await signAndMap(
+    supabase,
+    [data as unknown as PublicCatalogRow],
+    preferredVariantByProduct,
+  );
   return product ?? null;
 }
 
@@ -455,7 +468,9 @@ export async function getPublishedProductsForSitemap(limit = 1000): Promise<Site
     .eq("status", "published")
     .eq("shops.status", "approved")
     .eq("product_variants.active", true)
+    .gt("product_variants.price_cents", 0)
     .eq("product_evidence.status", "approved")
+    .not("product_evidence.public_summary", "is", null)
     .eq("product_media.status", "approved")
     .order("published_at", { ascending: false })
     .limit(limit);
