@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import Link from "next/link";
 
-export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({ error, unstable_retry }: { error: Error & { digest?: string }; unstable_retry: () => void }) {
   useEffect(() => {
-    // Surfaces the failure in browser and platform logs until Sentry lands.
+    // Keep a local diagnostic until centralized error reporting is connected.
     console.error("Unhandled storefront error", error);
   }, [error]);
 
@@ -15,9 +15,9 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       <section className="status-copy">
         <p>INCIDENT TECHNIQUE</p>
         <h1>Un imprévu<br/>de notre côté<span>.</span></h1>
-        <p className="status-lead">La page n’a pas pu être affichée. Vos données et votre panier ne sont pas affectés. Réessayez — si le problème persiste, il est déjà visible dans nos journaux.</p>
+        <p className="status-lead">La page n’a pas pu être affichée. Réessayez — si le problème persiste, conservez la référence d’incident pour nous aider à retrouver l’erreur.</p>
         <div className="status-actions">
-          <button onClick={reset} className="status-primary">Réessayer →</button>
+          <button onClick={unstable_retry} className="status-primary">Réessayer →</button>
           <Link href="/">Retour à l’accueil</Link>
         </div>
         {error.digest && <small className="status-digest">Référence incident : {error.digest}</small>}

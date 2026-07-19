@@ -133,7 +133,7 @@ async function signAndMap(supabase: SupabaseClient, rows: PublicCatalogRow[], pr
     : { data: [], error: null };
   if (signError) {
     console.error("Unable to sign public product media", signError.message);
-    return [];
+    throw new Error("Unable to prepare public product media");
   }
   const signedByPath = new Map<string, string>();
   for (const item of signed ?? []) {
@@ -396,11 +396,19 @@ export type PublicShop = {
   createdAt: string | null;
 };
 
+export type PublicShopCatalogPage = {
+  products: PublicProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
 // Public shop storefront: only approved shops are readable (RLS-backed and
 // re-checked explicitly here, same defense-in-depth as the catalog).
 export async function getPublicShop(slug: string): Promise<PublicShop | null> {
   const supabase = createPublicClient();
-  if (!supabase) return null;
+  if (!supabase) throw new Error("Public catalog is not configured");
 
   const { data, error } = await supabase
     .from("shops")
@@ -412,7 +420,7 @@ export async function getPublicShop(slug: string): Promise<PublicShop | null> {
 
   if (error) {
     console.error("Unable to load the public shop", error.message);
-    return null;
+    throw new Error("Unable to load the public shop");
   }
   if (!data || data.status !== "approved") return null;
 
@@ -425,27 +433,46 @@ export async function getPublicShop(slug: string): Promise<PublicShop | null> {
   };
 }
 
-export async function getPublicShopProducts(shopSlug: string, limit = 24): Promise<PublicProduct[]> {
+export async function getPublicShopProducts(
+  shopSlug: string,
+  requestedPage = 1,
+  requestedPageSize = 24,
+): Promise<PublicShopCatalogPage> {
   const supabase = createPublicClient();
-  if (!supabase) return [];
+  if (!supabase) throw new Error("Public catalog is not configured");
 
-  const { data, error } = await supabase
+  const page = Math.min(Math.max(Math.trunc(requestedPage), 1), 1000);
+  const pageSize = Math.min(Math.max(Math.trunc(requestedPageSize), 1), 48);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await supabase
     .from("products")
-    .select(CATALOG_ROW_SELECT)
+    .select(CATALOG_ROW_SELECT, { count: "exact" })
     .eq("shops.slug", shopSlug)
     .eq("status", "published")
     .eq("shops.status", "approved")
     .eq("product_variants.active", true)
+    .gt("product_variants.price_cents", 0)
     .eq("product_evidence.status", "approved")
+    .not("product_evidence.public_summary", "is", null)
+    .eq("product_media.status", "approved")
     .order("published_at", { ascending: false })
-    .limit(Math.min(Math.max(limit, 1), 48));
+    .range(from, to);
 
   if (error) {
     console.error("Unable to load the public shop catalog", error.message);
-    return [];
+    throw new Error("Unable to load the public shop catalog");
   }
 
-  return signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]);
+  const total = count ?? 0;
+  return {
+    products: await signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]),
+    total,
+    page,
+    pageSize,
+    pageCount: Math.ceil(total / pageSize),
+  };
 }
 
 // Light SEO projection for the sitemap: slugs and dates only, no media
@@ -497,9 +524,22 @@ export async function getPublicShopsForSitemap(limit = 500): Promise<SitemapShop
 
   const { data, error } = await supabase
     .from("shops")
-    .select("slug, products!inner(status)")
+    .select(`
+      slug,
+      products!inner(
+        status,
+        product_variants!inner(active, price_cents),
+        product_evidence!inner(status, public_summary),
+        product_media!inner(status)
+      )
+    `)
     .eq("status", "approved")
     .eq("products.status", "published")
+    .eq("products.product_variants.active", true)
+    .gt("products.product_variants.price_cents", 0)
+    .eq("products.product_evidence.status", "approved")
+    .not("products.product_evidence.public_summary", "is", null)
+    .eq("products.product_media.status", "approved")
     .limit(limit);
 
   if (error) {
