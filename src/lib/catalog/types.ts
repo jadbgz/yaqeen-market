@@ -40,3 +40,7 @@ export type PublicProduct = {
 export function productHref(product: Pick<PublicProduct, "shopSlug" | "slug">) {
   return `/produit/${encodeURIComponent(product.shopSlug)}/${encodeURIComponent(product.slug)}`;
 }
+
+export function shopHref(shopSlug: string) {
+  return `/boutique/${encodeURIComponent(shopSlug)}`;
+}

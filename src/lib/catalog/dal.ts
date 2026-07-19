@@ -375,6 +375,66 @@ export async function getPublicProduct(shopSlug: string, productSlug: string) {
   return product ?? null;
 }
 
+export type PublicShop = {
+  slug: string;
+  name: string;
+  description: string | null;
+  shipsFromCountry: string | null;
+  createdAt: string | null;
+};
+
+// Public shop storefront: only approved shops are readable (RLS-backed and
+// re-checked explicitly here, same defense-in-depth as the catalog).
+export async function getPublicShop(slug: string): Promise<PublicShop | null> {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("shops")
+    .select("slug, name, description, ships_from_country, status, created_at")
+    .eq("slug", slug)
+    .eq("status", "approved")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Unable to load the public shop", error.message);
+    return null;
+  }
+  if (!data || data.status !== "approved") return null;
+
+  return {
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    shipsFromCountry: data.ships_from_country,
+    createdAt: data.created_at,
+  };
+}
+
+export async function getPublicShopProducts(shopSlug: string, limit = 24): Promise<PublicProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .eq("shops.slug", shopSlug)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved")
+    .order("published_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 48));
+
+  if (error) {
+    console.error("Unable to load the public shop catalog", error.message);
+    return [];
+  }
+
+  return signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]);
+}
+
 // Light SEO projection for the sitemap: slugs and dates only, no media
 // signing. Move to segmented sitemaps (generateSitemaps) beyond ~1000 URLs.
 export type SitemapProduct = { slug: string; shopSlug: string; publishedAt: string | null };
@@ -410,4 +470,27 @@ export async function getPublishedProductsForSitemap(limit = 1000): Promise<Site
     shopSlug: row.shops.slug,
     publishedAt: row.published_at,
   }));
+}
+
+// Approved shops that have at least one published product (inner join keeps
+// the payload to slugs only) — used by the sitemap.
+export type SitemapShop = { slug: string };
+
+export async function getPublicShopsForSitemap(limit = 500): Promise<SitemapShop[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("shops")
+    .select("slug, products!inner(status)")
+    .eq("status", "approved")
+    .eq("products.status", "published")
+    .limit(limit);
+
+  if (error) {
+    console.error("Unable to load the shop sitemap projection", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as Array<{ slug: string }>).map((row) => ({ slug: row.slug }));
 }

@@ -132,3 +132,32 @@ a,button { cursor:pointer; }
 .catalog-pagination a{font-weight:700;text-decoration:underline;text-underline-offset:5px}
 .catalog-pagination span[aria-disabled]{color:#9a978d}
 .catalog-pagination strong{font-size:11px;letter-spacing:.08em}
+
+/* Public shop page */
+.shop-hero{padding:70px 4vw 46px;border-bottom:1px solid #171b1825}
+.shop-kicker{font-size:9px;font-weight:750;letter-spacing:.22em;color:#0c5a50}
+.shop-hero h1{margin-top:20px;font-size:clamp(46px,7vw,96px);font-weight:850;line-height:.84;letter-spacing:-.075em}
+.shop-hero h1 span{color:#ef6b38}
+.shop-description{margin-top:22px;max-width:560px;color:#5e625e;font-size:13px;line-height:1.8}
+.shop-facts{display:flex;flex-wrap:wrap;gap:12px 26px;margin-top:26px;font-size:11px}
+.shop-facts b{margin-right:7px;color:#0c5a50;font-style:normal}
+.shop-trust{display:grid;grid-template-columns:.5fr 1.5fr;padding:85px 4vw;background:#092b5d;color:#f1eade}
+.shop-trust>p{font-size:9px;font-weight:750;letter-spacing:.22em}
+.shop-trust h2{grid-column:2;font-size:clamp(38px,5.5vw,72px);font-weight:830;line-height:.88;letter-spacing:-.07em}
+.shop-trust h2 span{color:#ef6b38}
+.shop-trust>div{grid-column:2;display:grid;grid-template-columns:1fr 1fr;gap:45px;margin-top:42px;padding-top:24px;border-top:1px solid #ffffff30;color:#bfc7c8;font-size:12px;line-height:1.8}
+.product-shop-link{display:inline-flex;margin-top:34px;border-radius:99px;background:#f1eade;padding:13px 20px;color:#092b5d;font-size:11px;font-weight:750}
+@media(max-width:900px){.shop-trust{grid-template-columns:1fr}.shop-trust h2,.shop-trust>div{grid-column:1}.shop-trust h2{margin-top:26px}.shop-trust>div{grid-template-columns:1fr;gap:18px}}
+
+/* Status pages (404 / error) */
+.status-shell{display:flex;min-height:100vh;flex-direction:column;background:#e9e1d2;padding:34px 5vw}
+.status-brand{font-size:24px}
+.status-copy{margin:auto;max-width:640px;text-align:left;padding:40px 0 80px}
+.status-copy>p:first-child{font-size:9px;font-weight:750;letter-spacing:.24em;color:#9e4626}
+.status-copy h1{margin-top:20px;font-size:clamp(52px,8vw,104px);font-weight:850;line-height:.82;letter-spacing:-.08em}
+.status-copy h1 span{color:#ef6b38}
+.status-lead{margin-top:26px;max-width:480px;color:#5e625e;font-size:13px;line-height:1.8}
+.status-actions{display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin-top:34px;font-size:12px}
+.status-actions a{text-decoration:underline;text-underline-offset:5px}
+.status-primary{border-radius:99px;background:#171b18;padding:14px 20px;color:#f3efe5!important;font-size:11px;font-weight:700;text-decoration:none!important;border:0;cursor:pointer}
+.status-digest{display:block;margin-top:30px;color:#8b887c;font-size:10px;letter-spacing:.06em}
