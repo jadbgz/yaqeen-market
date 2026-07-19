@@ -10,7 +10,15 @@ import { productHref } from "@/lib/catalog/types";
 
 type ProductRouteProps = {
   params: Promise<{ shopSlug: string; productSlug: string }>;
+  searchParams: Promise<{ variant?: string | string[] }>;
 };
+
+function requestedVariant(value: string | string[] | undefined) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)
+    ? candidate
+    : undefined;
+}
 
 export async function generateMetadata({ params }: ProductRouteProps): Promise<Metadata> {
   const { shopSlug, productSlug } = await params;
@@ -20,7 +28,7 @@ export async function generateMetadata({ params }: ProductRouteProps): Promise<M
   return {
     title: `${product.name} par ${product.shop} — Yaqeen Market`,
     description: product.description.slice(0, 155),
-    alternates: { canonical: productHref(product) },
+    alternates: { canonical: productHref(product, false) },
     openGraph: {
       title: product.name,
       description: product.description.slice(0, 155),
@@ -30,9 +38,9 @@ export async function generateMetadata({ params }: ProductRouteProps): Promise<M
   };
 }
 
-export default async function ProductPage({ params }: ProductRouteProps) {
-  const { shopSlug, productSlug } = await params;
-  const product = await getPublicProduct(shopSlug, productSlug);
+export default async function ProductPage({ params, searchParams }: ProductRouteProps) {
+  const [{ shopSlug, productSlug }, query] = await Promise.all([params, searchParams]);
+  const product = await getPublicProduct(shopSlug, productSlug, requestedVariant(query.variant));
   if (!product) notFound();
 
   const related = (await getPublicProducts({ category: product.category }))

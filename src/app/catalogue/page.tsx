@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MarketHeader } from "@/components/market-header";
-import { getPublicProducts } from "@/lib/catalog/dal";
+import { getPublicCatalogPage, getPublicCategoryCounts } from "@/lib/catalog/dal";
 import { categories, formatPrice } from "@/lib/catalog/format";
 import { catalogHref, parseCatalogSearch } from "@/lib/catalog/search";
 import { productHref } from "@/lib/catalog/types";
@@ -15,11 +15,10 @@ type CatalogueParams = Record<string, string | string[] | undefined>;
 
 export default async function CataloguePage({ searchParams }: { searchParams: Promise<CatalogueParams> }) {
   const search = parseCatalogSearch(await searchParams);
-  const [products, facetedProducts] = await Promise.all([
-    getPublicProducts(search),
-    getPublicProducts({ ...search, category: "Tous" }),
+  const [{ products, total, page, pageCount }, categoryCounts] = await Promise.all([
+    getPublicCatalogPage(search),
+    getPublicCategoryCounts(search),
   ]);
-  const categoryCounts = new Map(categories.map((category) => [category, category === "Tous" ? facetedProducts.length : facetedProducts.filter((product) => product.category === category).length]));
   const filters = [
     search.q ? { label: `“${search.q}”`, href: catalogHref(search, { q: "" }) } : null,
     search.category !== "Tous" ? { label: search.category, href: catalogHref(search, { category: "Tous" }) } : null,
@@ -29,7 +28,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
 
   return <main className="catalog-shell">
     <MarketHeader query={search.q} />
-    <section className="catalog-intro"><p>EXPLORER YAQEEN MARKET</p><h1>Votre prochain<br/>choix, en <span>confiance.</span></h1><div><p>Recherchez parmi les produits réellement publiés. Chaque résultat indique qui le vend et pourquoi il est visible.</p><strong>{products.length} résultat{products.length > 1 ? "s" : ""}</strong></div></section>
+    <section className="catalog-intro"><p>EXPLORER YAQEEN MARKET</p><h1>Votre prochain<br/>choix, en <span>confiance.</span></h1><div><p>Recherchez parmi les produits réellement publiés. Chaque résultat indique qui le vend et pourquoi il est visible.</p><strong>{total} résultat{total > 1 ? "s" : ""}</strong></div></section>
 
     <section className="catalog-discovery" aria-label="Recherche et filtres">
       <div className="catalog-cats">{categories.map((category) => <Link key={category} className={category === search.category ? "active" : ""} href={catalogHref(search, { category })}><span>{category}</span><small>{categoryCounts.get(category) ?? 0}</small></Link>)}</div>
@@ -44,8 +43,13 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
       {filters.length > 0 && <div className="catalog-active-filters"><span>Filtres actifs</span>{filters.map((filter) => <Link key={filter.label} href={filter.href}>{filter.label} <b aria-hidden="true">×</b></Link>)}<Link href="/catalogue" className="clear-all">Tout effacer</Link></div>}
     </section>
 
-    <section className="catalog-results-head"><p><strong>{products.length}</strong> produit{products.length > 1 ? "s" : ""} trouvé{products.length > 1 ? "s" : ""}</p><span>Données du catalogue publié</span></section>
+    <section className="catalog-results-head"><p><strong>{total}</strong> produit{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}{pageCount > 1 && <> · page {page} sur {pageCount}</>}</p><span>Données du catalogue publié</span></section>
     <section className="catalog-grid">{products.map((product,index) => <Link href={productHref(product)} className="catalog-card" key={product.id}><div className="catalog-visual catalog-photo"><Image src={product.media[0].url} alt={product.media[0].altText} fill sizes="(max-width: 720px) 50vw, (max-width: 1100px) 33vw, 25vw" unoptimized/><em>Preuve revue</em><span>{String(index + 1).padStart(2,"0")}</span></div><div className="catalog-info"><p>{product.category} · {product.shop}</p><div><h2>{product.name}</h2><strong>{formatPrice(product.price,product.currency)}</strong></div><footer><span className="verified-dot">✓ Publié après revue</span><span className={product.stock > 0 ? "in-stock" : "out-stock"}>{product.stock > 0 ? "En stock" : "Indisponible"}</span></footer></div></Link>)}{products.length === 0 && <div className="catalog-empty"><span>⌕</span><strong>Aucun produit ne correspond exactement.</strong><p>Modifiez les filtres ou explorez tout le catalogue publié. Aucun résultat artificiel ne vous sera proposé.</p><Link href="/catalogue">Réinitialiser la recherche</Link></div>}</section>
+    {pageCount > 1 && <nav className="catalog-pagination" aria-label="Pagination du catalogue">
+      {page > 1 ? <Link href={catalogHref(search, { page: page - 1 })} rel="prev">← Page précédente</Link> : <span aria-disabled="true">← Page précédente</span>}
+      <strong>Page {page} / {pageCount}</strong>
+      {page < pageCount ? <Link href={catalogHref(search, { page: page + 1 })} rel="next">Page suivante →</Link> : <span aria-disabled="true">Page suivante →</span>}
+    </nav>}
     <footer className="catalog-footer"><p className="brand-mark">yaqeen<span>✦</span></p><span>Une marketplace. Plusieurs boutiques. Un même niveau d’exigence.</span></footer>
   </main>;
 }

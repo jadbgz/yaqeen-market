@@ -37,6 +37,12 @@ export type PublicProduct = {
   publishedAt: string | null;
 };
 
-export function productHref(product: Pick<PublicProduct, "shopSlug" | "slug">) {
-  return `/produit/${encodeURIComponent(product.shopSlug)}/${encodeURIComponent(product.slug)}`;
+export function productHref(
+  product: Pick<PublicProduct, "shopSlug" | "slug"> & Partial<Pick<PublicProduct, "variantId">>,
+  includeVariant = true,
+) {
+  const pathname = `/produit/${encodeURIComponent(product.shopSlug)}/${encodeURIComponent(product.slug)}`;
+  return includeVariant && product.variantId
+    ? `${pathname}?variant=${encodeURIComponent(product.variantId)}`
+    : pathname;
 }

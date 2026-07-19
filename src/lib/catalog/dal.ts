@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { getSupabaseConfig } from "@/lib/supabase/config";
-import { categoryLabel } from "@/lib/catalog/format";
+import { categoryLabel, categoryValue } from "@/lib/catalog/format";
 import type { PublicProduct } from "@/lib/catalog/types";
 
 type PublicCatalogRow = {
@@ -54,11 +54,32 @@ const visualByCategory: Record<string, { color: string; shape: string }> = {
   maison: { color: "#d09b47", shape: "box" },
 };
 
-function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string>): PublicProduct | null {
-  const shop = row.shops;
-  const variant = row.product_variants
+const CATALOG_ROW_SELECT = `
+  id, slug, title, description, category, verification_summary, published_at,
+  shops!inner(slug, name, status),
+  product_variants(id, title, price_cents, currency, stock_on_hand, stock_reserved, active),
+  product_evidence(kind, status, issuer_name, reference_number, scope, valid_from, valid_until, public_summary)
+  ,product_media(storage_path, status, position, alt_text, width, height)
+`;
+
+function createPublicClient() {
+  const config = getSupabaseConfig();
+  if (!config) return null;
+  return createClient(config.url, config.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string>, preferredVariantId?: string): PublicProduct | null {
+  const eligibleVariants = row.product_variants
     .filter((item) => item.active && item.price_cents > 0)
-    .sort((a, b) => a.price_cents - b.price_cents)[0];
+    .sort((a, b) => a.price_cents - b.price_cents);
+  const shop = row.shops;
+  // The SQL search decides which variant qualified the product; the storefront
+  // must show that exact variant so price and stock never contradict filters.
+  const variant = (preferredVariantId && eligibleVariants.find((item) => item.id === preferredVariantId))
+    || eligibleVariants.find((item) => item.stock_on_hand - item.stock_reserved > 0)
+    || eligibleVariants[0];
   const evidence = row.product_evidence.find(
     (item) => item.status === "approved" && item.public_summary,
   );
@@ -105,34 +126,7 @@ function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string
   };
 }
 
-async function queryPublishedProducts(): Promise<PublicProduct[]> {
-  const config = getSupabaseConfig();
-  if (!config) return [];
-
-  const supabase = createClient(config.url, config.publishableKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-  const { data, error } = await supabase
-    .from("products")
-    .select(`
-      id, slug, title, description, category, verification_summary, published_at,
-      shops!inner(slug, name, status),
-      product_variants(id, title, price_cents, currency, stock_on_hand, stock_reserved, active),
-      product_evidence(kind, status, issuer_name, reference_number, scope, valid_from, valid_until, public_summary)
-      ,product_media(storage_path, status, position, alt_text, width, height)
-    `)
-    .eq("status", "published")
-    .eq("shops.status", "approved")
-    .eq("product_variants.active", true)
-    .eq("product_evidence.status", "approved")
-    .order("published_at", { ascending: false });
-
-  if (error) {
-    console.error("Unable to load the public catalog", error.message);
-    return [];
-  }
-
-  const rows = (data ?? []) as unknown as PublicCatalogRow[];
+async function signAndMap(supabase: SupabaseClient, rows: PublicCatalogRow[], preferredVariantByProduct?: Map<string, string>): Promise<PublicProduct[]> {
   const paths = rows.flatMap((row) => row.product_media.filter((item) => item.status === "approved").map((item) => item.storage_path));
   const { data: signed, error: signError } = paths.length
     ? await supabase.storage.from("product-media").createSignedUrls(paths, 3600)
@@ -147,44 +141,288 @@ async function queryPublishedProducts(): Promise<PublicProduct[]> {
   }
 
   return rows
-    .map((row) => toPublicProduct(row, signedByPath))
+    .map((row) => toPublicProduct(row, signedByPath, preferredVariantByProduct?.get(row.id)))
     .filter((product): product is PublicProduct => product !== null);
+}
+
+async function queryPublishedProducts(): Promise<PublicProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved")
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    console.error("Unable to load the public catalog", error.message);
+    return [];
+  }
+
+  return signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]);
 }
 
 const getPublishedProducts = cache(queryPublishedProducts);
 
-export async function getPublicProducts(options: {
+async function hydrateProductsByIds(
+  supabase: SupabaseClient,
+  ids: string[],
+  preferredVariantByProduct?: Map<string, string>,
+): Promise<PublicProduct[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .in("id", ids)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved");
+
+  if (error) {
+    console.error("Unable to hydrate the public catalog page", error.message);
+    return [];
+  }
+
+  const products = await signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[], preferredVariantByProduct);
+  const rank = new Map(ids.map((id, index) => [id, index]));
+  return products.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+}
+
+export type PublicCatalogQuery = {
   q?: string;
   category?: string;
   sort?: string;
   availability?: "all" | "available";
   min?: number;
   max?: number;
-  limit?: number;
-} = {}) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr");
-  const q = normalize(options.q?.trim() ?? "");
+  page?: number;
+  pageSize?: number;
+};
+
+export type PublicCatalogPage = {
+  products: PublicProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
+const DEFAULT_PAGE_SIZE = 24;
+
+// PGRST202: PostgREST cannot find the function in its schema cache.
+// 42883: PostgreSQL undefined_function. Anything else is a real failure.
+function isMissingSearchFunction(error: { code?: string }) {
+  return error.code === "PGRST202" || error.code === "42883";
+}
+const eurosToCents = (value: number | undefined) =>
+  value === undefined ? null : Math.round(value * 100);
+
+function normalizeText(value: string) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase("fr");
+}
+
+function legacyFilter(products: PublicProduct[], options: PublicCatalogQuery): PublicProduct[] {
+  const q = normalizeText(options.q?.trim() ?? "");
   const category = options.category?.trim().toLocaleLowerCase("fr") ?? "";
-  const products = (await getPublishedProducts()).filter(
+  const filtered = products.filter(
     (product) =>
       (!category || category === "tous" || product.category.toLocaleLowerCase("fr") === category) &&
-      (!q || normalize(`${product.name} ${product.shop} ${product.category} ${product.description} ${product.verificationSummary}`).includes(q)) &&
+      (!q || normalizeText(`${product.name} ${product.shop} ${product.category} ${product.description} ${product.verificationSummary}`).includes(q)) &&
       (options.availability !== "available" || product.stock > 0) &&
       (options.min === undefined || product.price >= options.min) &&
       (options.max === undefined || product.price <= options.max),
   );
 
-  products.sort((a, b) => {
+  filtered.sort((a, b) => {
     if (options.sort === "prix-asc") return a.price - b.price;
     if (options.sort === "prix-desc") return b.price - a.price;
     return (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "");
   });
 
-  return typeof options.limit === "number" ? products.slice(0, options.limit) : products;
+  return filtered;
 }
 
-export async function getPublicProduct(shopSlug: string, productSlug: string) {
-  return (await getPublishedProducts()).find(
-    (product) => product.shopSlug === shopSlug && product.slug === productSlug,
-  ) ?? null;
+// SQL-side search with a graceful fallback while the search migration is not
+// yet applied to the connected Supabase project.
+export async function getPublicCatalogPage(options: PublicCatalogQuery = {}): Promise<PublicCatalogPage> {
+  const pageSize = Math.min(Math.max(options.pageSize ?? DEFAULT_PAGE_SIZE, 1), 48);
+  const page = Math.max(options.page ?? 1, 1);
+  const empty: PublicCatalogPage = { products: [], total: 0, page, pageSize, pageCount: 0 };
+
+  const supabase = createPublicClient();
+  if (!supabase) return empty;
+
+  const rpcArgs = {
+    requested_query: options.q?.trim() || null,
+    requested_category: options.category ? categoryValue(options.category) : null,
+    requested_min_cents: eurosToCents(options.min),
+    requested_max_cents: eurosToCents(options.max),
+    requested_only_available: options.availability === "available",
+    requested_sort: options.sort ?? "selection",
+  };
+  const { data, error } = await supabase.rpc("search_public_catalog", {
+    ...rpcArgs,
+    requested_limit: pageSize,
+    requested_offset: (page - 1) * pageSize,
+  });
+
+  if (error) {
+    if (!isMissingSearchFunction(error)) {
+      console.error("Catalog search RPC failed", error.code, error.message);
+      throw new Error(`Catalog search failed: ${error.message}`);
+    }
+    // Transitional only: the search migration is not applied yet on this
+    // Supabase project. Remove this branch once the migration is deployed.
+    console.error("Catalog search RPC missing (migration not applied), using in-memory fallback", error.message);
+    const filtered = legacyFilter(await getPublishedProducts(), options);
+    const start = (page - 1) * pageSize;
+    return {
+      products: filtered.slice(start, start + pageSize),
+      total: filtered.length,
+      page,
+      pageSize,
+      pageCount: Math.ceil(filtered.length / pageSize),
+    };
+  }
+
+  const rows = (data ?? []) as Array<{ product_id: string; variant_id: string; total_count: number }>;
+  let total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  if (rows.length === 0 && page > 1) {
+    // Out-of-range page: recover the real total so pagination stays correct.
+    const { data: probe, error: probeError } = await supabase.rpc("search_public_catalog", {
+      ...rpcArgs,
+      requested_limit: 1,
+      requested_offset: 0,
+    });
+    if (probeError) {
+      console.error("Catalog total probe failed", probeError.code, probeError.message);
+      throw new Error(`Catalog total probe failed: ${probeError.message}`);
+    }
+    const probeRows = (probe ?? []) as Array<{ total_count: number }>;
+    total = probeRows.length > 0 ? Number(probeRows[0].total_count) : 0;
+  }
+  const preferredVariantByProduct = new Map(rows.map((row) => [row.product_id, row.variant_id]));
+  const products = await hydrateProductsByIds(supabase, rows.map((row) => row.product_id), preferredVariantByProduct);
+  return { products, total, page, pageSize, pageCount: Math.ceil(total / pageSize) };
+}
+
+export async function getPublicCategoryCounts(options: Omit<PublicCatalogQuery, "category" | "page" | "pageSize" | "sort"> = {}): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const supabase = createPublicClient();
+  if (!supabase) return counts;
+
+  const { data, error } = await supabase.rpc("count_public_catalog_by_category", {
+    requested_query: options.q?.trim() || null,
+    requested_min_cents: eurosToCents(options.min),
+    requested_max_cents: eurosToCents(options.max),
+    requested_only_available: options.availability === "available",
+  });
+
+  if (error) {
+    if (!isMissingSearchFunction(error)) {
+      console.error("Catalog facet RPC failed", error.code, error.message);
+      throw new Error(`Catalog facet counts failed: ${error.message}`);
+    }
+    // Transitional only: remove once the search migration is deployed.
+    console.error("Catalog facet RPC missing (migration not applied), using in-memory fallback", error.message);
+    const filtered = legacyFilter(await getPublishedProducts(), { ...options, category: "Tous" });
+    for (const product of filtered) {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+    }
+    counts.set("Tous", filtered.length);
+    return counts;
+  }
+
+  let total = 0;
+  for (const row of (data ?? []) as Array<{ category: string; total: number }>) {
+    counts.set(categoryLabel(row.category), Number(row.total));
+    total += Number(row.total);
+  }
+  counts.set("Tous", total);
+  return counts;
+}
+
+export async function getPublicProducts(options: PublicCatalogQuery & { limit?: number } = {}) {
+  const { products } = await getPublicCatalogPage({
+    ...options,
+    pageSize: options.limit ?? options.pageSize ?? DEFAULT_PAGE_SIZE,
+  });
+  return products;
+}
+
+export async function getPublicProduct(shopSlug: string, productSlug: string, preferredVariantId?: string) {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT)
+    .eq("slug", productSlug)
+    .eq("shops.slug", shopSlug)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .eq("product_evidence.status", "approved")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Unable to load the public product", error.message);
+    return null;
+  }
+  if (!data) return null;
+
+  const preferredVariantByProduct = preferredVariantId
+    ? new Map([[data.id, preferredVariantId]])
+    : undefined;
+  const [product] = await signAndMap(
+    supabase,
+    [data as unknown as PublicCatalogRow],
+    preferredVariantByProduct,
+  );
+  return product ?? null;
+}
+
+// Light SEO projection for the sitemap: slugs and dates only, no media
+// signing. Move to segmented sitemaps (generateSitemaps) beyond ~1000 URLs.
+export type SitemapProduct = { slug: string; shopSlug: string; publishedAt: string | null };
+
+export async function getPublishedProductsForSitemap(limit = 1000): Promise<SitemapProduct[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(`
+      slug, published_at,
+      shops!inner(slug, status),
+      product_variants!inner(active),
+      product_evidence!inner(status),
+      product_media!inner(status)
+    `)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .gt("product_variants.price_cents", 0)
+    .eq("product_evidence.status", "approved")
+    .not("product_evidence.public_summary", "is", null)
+    .eq("product_media.status", "approved")
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Unable to load the sitemap projection", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as unknown as Array<{ slug: string; published_at: string | null; shops: { slug: string } }>).map((row) => ({
+    slug: row.slug,
+    shopSlug: row.shops.slug,
+    publishedAt: row.published_at,
+  }));
 }

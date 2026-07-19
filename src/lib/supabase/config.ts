@@ -41,5 +41,11 @@ export function getSiteUrl(): string {
     }
   }
 
+  if (process.env.NODE_ENV === "production") {
+    // A production deployment without NEXT_PUBLIC_SITE_URL would emit
+    // localhost canonical URLs, sitemap entries and auth confirmation links.
+    console.warn("NEXT_PUBLIC_SITE_URL is missing or invalid: falling back to http://localhost:3000. Set it before serving traffic.");
+  }
+
   return "http://localhost:3000";
 }
