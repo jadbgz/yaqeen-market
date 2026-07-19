@@ -133,7 +133,7 @@ async function signAndMap(supabase: SupabaseClient, rows: PublicCatalogRow[], pr
     : { data: [], error: null };
   if (signError) {
     console.error("Unable to sign public product media", signError.message);
-    return [];
+    throw new Error("Unable to prepare public product media");
   }
   const signedByPath = new Map<string, string>();
   for (const item of signed ?? []) {
@@ -388,6 +388,93 @@ export async function getPublicProduct(shopSlug: string, productSlug: string, pr
   return product ?? null;
 }
 
+export type PublicShop = {
+  slug: string;
+  name: string;
+  description: string | null;
+  shipsFromCountry: string | null;
+  createdAt: string | null;
+};
+
+export type PublicShopCatalogPage = {
+  products: PublicProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
+// Public shop storefront: only approved shops are readable (RLS-backed and
+// re-checked explicitly here, same defense-in-depth as the catalog).
+export async function getPublicShop(slug: string): Promise<PublicShop | null> {
+  const supabase = createPublicClient();
+  if (!supabase) throw new Error("Public catalog is not configured");
+
+  const { data, error } = await supabase
+    .from("shops")
+    .select("slug, name, description, ships_from_country, status, created_at")
+    .eq("slug", slug)
+    .eq("status", "approved")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Unable to load the public shop", error.message);
+    throw new Error("Unable to load the public shop");
+  }
+  if (!data || data.status !== "approved") return null;
+
+  return {
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    shipsFromCountry: data.ships_from_country,
+    createdAt: data.created_at,
+  };
+}
+
+export async function getPublicShopProducts(
+  shopSlug: string,
+  requestedPage = 1,
+  requestedPageSize = 24,
+): Promise<PublicShopCatalogPage> {
+  const supabase = createPublicClient();
+  if (!supabase) throw new Error("Public catalog is not configured");
+
+  const page = Math.min(Math.max(Math.trunc(requestedPage), 1), 1000);
+  const pageSize = Math.min(Math.max(Math.trunc(requestedPageSize), 1), 48);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await supabase
+    .from("products")
+    .select(CATALOG_ROW_SELECT, { count: "exact" })
+    .eq("shops.slug", shopSlug)
+    .eq("status", "published")
+    .eq("shops.status", "approved")
+    .eq("product_variants.active", true)
+    .gt("product_variants.price_cents", 0)
+    .eq("product_evidence.status", "approved")
+    .not("product_evidence.public_summary", "is", null)
+    .eq("product_media.status", "approved")
+    .order("published_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("Unable to load the public shop catalog", error.message);
+    throw new Error("Unable to load the public shop catalog");
+  }
+
+  const total = count ?? 0;
+  return {
+    products: await signAndMap(supabase, (data ?? []) as unknown as PublicCatalogRow[]),
+    total,
+    page,
+    pageSize,
+    pageCount: Math.ceil(total / pageSize),
+  };
+}
+
 // Light SEO projection for the sitemap: slugs and dates only, no media
 // signing. Move to segmented sitemaps (generateSitemaps) beyond ~1000 URLs.
 export type SitemapProduct = { slug: string; shopSlug: string; publishedAt: string | null };
@@ -425,4 +512,40 @@ export async function getPublishedProductsForSitemap(limit = 1000): Promise<Site
     shopSlug: row.shops.slug,
     publishedAt: row.published_at,
   }));
+}
+
+// Approved shops that have at least one published product (inner join keeps
+// the payload to slugs only) — used by the sitemap.
+export type SitemapShop = { slug: string };
+
+export async function getPublicShopsForSitemap(limit = 500): Promise<SitemapShop[]> {
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("shops")
+    .select(`
+      slug,
+      products!inner(
+        status,
+        product_variants!inner(active, price_cents),
+        product_evidence!inner(status, public_summary),
+        product_media!inner(status)
+      )
+    `)
+    .eq("status", "approved")
+    .eq("products.status", "published")
+    .eq("products.product_variants.active", true)
+    .gt("products.product_variants.price_cents", 0)
+    .eq("products.product_evidence.status", "approved")
+    .not("products.product_evidence.public_summary", "is", null)
+    .eq("products.product_media.status", "approved")
+    .limit(limit);
+
+  if (error) {
+    console.error("Unable to load the shop sitemap projection", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as Array<{ slug: string }>).map((row) => ({ slug: row.slug }));
 }

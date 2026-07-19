@@ -46,3 +46,7 @@ export function productHref(
     ? `${pathname}?variant=${encodeURIComponent(product.variantId)}`
     : pathname;
 }
+
+export function shopHref(shopSlug: string) {
+  return `/boutique/${encodeURIComponent(shopSlug)}`;
+}
