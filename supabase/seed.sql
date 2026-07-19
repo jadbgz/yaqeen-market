@@ -1,0 +1,3 @@
+-- Intentionally empty.
+-- Authentication-capable development users must be created through Supabase Auth
+-- (Studio or the Admin API), never by inserting password material in source control.

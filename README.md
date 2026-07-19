@@ -11,15 +11,66 @@ Le click & collect ne fait pas partie du périmètre.
 ## Lancer le projet
 
 ```bash
-npm install
+npm ci
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
 Ouvrir ensuite [http://localhost:3000](http://localhost:3000).
 
+L'inscription et la connexion utilisent Supabase Auth. Renseigner dans `.env.local` l'URL et la clé publiable fournies par Supabase. Ne jamais exposer une clé `secret` ou `service_role` dans une variable `NEXT_PUBLIC_*`.
+
+## Tester le paiement web
+
+Le checkout refuse toute clé Stripe live. Renseigner uniquement les clés `pk_test_…`, `sk_test_…`, le secret webhook `whsec_…`, la clé `service_role` Supabase côté serveur et `STRIPE_TEST_CHECKOUT_ENABLED=true` dans `.env.local`.
+
+Pour recevoir localement les événements signés avec la CLI Stripe :
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copier le secret `whsec_…` affiché par la CLI, redémarrer Next.js, puis utiliser exclusivement une carte de test Stripe. Le paiement live, les transferts vendeurs et les remboursements restent volontairement désactivés.
+
+## Lancer l'application mobile
+
+```bash
+Set-Location apps/mobile
+npm ci
+Copy-Item .env.example .env.local
+npm run start
+```
+
+Renseigner `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_SITE_URL` et, pour PaymentSheet, `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` avec une clé `pk_test_…`. Seules les clés publiques Supabase et Stripe peuvent être embarquées ; les droits effectifs restent contrôlés par les politiques RLS et les frontières serveur.
+
+Le schéma natif est `yaqeen://`. Avant une distribution iOS ou Android, ajouter l'URL de rappel `yaqeen://auth/callback` et les URL web de production autorisées dans la liste des redirections Supabase Auth.
+
+Vérifications mobiles :
+
+```bash
+npm run lint
+npx expo customize tsconfig.json
+npx tsc --noEmit
+npx expo-doctor
+npx expo export --platform all --output-dir dist-ci
+```
+
+## Base locale
+
+Prérequis : Node.js 20+ et un runtime compatible Docker. Le runtime de conteneurs n'est pas inclus dans le dépôt.
+
+```bash
+npm run db:start
+npm run db:test
+npm run db:lint
+```
+
+`supabase/config.toml`, les migrations, le seed non sensible et les tests pgTAP sont versionnés. Les données et secrets locaux ne le sont pas.
+
 ## Vérifications
 
 ```bash
 npm run lint
+npm run typecheck
 npm run build
 ```

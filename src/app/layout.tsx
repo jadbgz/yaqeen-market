@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
+import { getSiteUrl } from "@/lib/supabase/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -9,6 +10,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "Yaqeen Market — La marketplace halal de confiance",
   description: "Livres, mode, parfums, beauté et bien-être : découvrez des boutiques engagées et des produits sélectionnés avec soin.",
 };
@@ -23,7 +25,7 @@ export default function RootLayout({
       lang="fr"
       className={`${geistSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><CartProvider>{children}</CartProvider></body>
+      <body className="min-h-full flex flex-col"><div className="prototype-banner">VERSION DE DÉVELOPPEMENT · PAIEMENT STRIPE EN BAC À SABLE UNIQUEMENT</div><CartProvider>{children}</CartProvider></body>
     </html>
   );
 }
