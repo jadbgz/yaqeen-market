@@ -12,8 +12,8 @@ export type ModerationQueue = {
     category: string;
     description: string | null;
     shopName: string;
-    evidence: { id: string; kind: string; scope: string; issuerName: string | null; referenceNumber: string | null; proposedSummary: string | null } | null;
-    variant: { title: string; sku: string; priceCents: number; stock: number } | null;
+    evidence: Array<{ id: string; kind: string; scope: string; issuerName: string | null; referenceNumber: string | null; proposedSummary: string | null; validFrom: string | null; validUntil: string | null }>;
+    variants: Array<{ title: string; sku: string; priceCents: number; stock: number }>;
     media: Array<{ id: string; position: number; altText: string; width: number; height: number; byteSize: number; signedUrl: string | null }>;
   }>;
 };
@@ -33,7 +33,7 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
   const shopIds = [...new Set(productRows.map((product) => product.shop_id))];
   const [{ data: productShops }, { data: evidence }, { data: variants }, { data: media }] = await Promise.all([
     shopIds.length ? supabase.from("shops").select("id, name").in("id", shopIds) : Promise.resolve({ data: [] }),
-    productIds.length ? supabase.from("product_evidence").select("id, product_id, kind, scope, issuer_name, reference_number, public_summary").in("product_id", productIds).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
+    productIds.length ? supabase.from("product_evidence").select("id, product_id, kind, scope, issuer_name, reference_number, public_summary, valid_from, valid_until").in("product_id", productIds).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
     productIds.length ? supabase.from("product_variants").select("product_id, title, sku, price_cents, stock_on_hand").in("product_id", productIds).eq("active", true).order("created_at") : Promise.resolve({ data: [] }),
     productIds.length ? supabase.from("product_media").select("id, product_id, position, alt_text, width, height, byte_size, storage_path").in("product_id", productIds).eq("status", "pending").order("position") : Promise.resolve({ data: [] }),
   ]);
@@ -46,16 +46,16 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
   return {
     shops: (shops ?? []).map((shop) => ({ id: shop.id, name: shop.name, slug: shop.slug, description: shop.description, country: shop.ships_from_country })),
     products: productRows.map((product) => {
-      const proof = evidence?.find((item) => item.product_id === product.id);
-      const variant = variants?.find((item) => item.product_id === product.id);
+      const productEvidence = evidence?.filter((item) => item.product_id === product.id) ?? [];
+      const productVariants = variants?.filter((item) => item.product_id === product.id) ?? [];
       return {
         id: product.id,
         title: product.title,
         category: product.category,
         description: product.description,
         shopName: productShops?.find((shop) => shop.id === product.shop_id)?.name ?? "Boutique inconnue",
-        evidence: proof ? { id: proof.id, kind: proof.kind, scope: proof.scope, issuerName: proof.issuer_name, referenceNumber: proof.reference_number, proposedSummary: proof.public_summary } : null,
-        variant: variant ? { title: variant.title, sku: variant.sku, priceCents: variant.price_cents, stock: variant.stock_on_hand } : null,
+        evidence: productEvidence.map((proof) => ({ id: proof.id, kind: proof.kind, scope: proof.scope, issuerName: proof.issuer_name, referenceNumber: proof.reference_number, proposedSummary: proof.public_summary, validFrom: proof.valid_from, validUntil: proof.valid_until })),
+        variants: productVariants.map((variant) => ({ title: variant.title, sku: variant.sku, priceCents: variant.price_cents, stock: variant.stock_on_hand })),
         media: mediaRows.filter((item) => item.product_id === product.id).map((item) => ({
           id: item.id,
           position: item.position,

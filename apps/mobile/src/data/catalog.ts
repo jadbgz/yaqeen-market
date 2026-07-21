@@ -6,6 +6,8 @@ export type PublicEvidence = {
   referenceNumber: string | null;
   scope: string;
   publicSummary: string;
+  validFrom: string | null;
+  validUntil: string | null;
 };
 
 export type Product = {
@@ -53,6 +55,8 @@ type CatalogRow = {
     reference_number: string | null;
     scope: string;
     public_summary: string | null;
+    valid_from: string | null;
+    valid_until: string | null;
   }[];
   product_media: {
     storage_path: string;
@@ -101,7 +105,7 @@ const publicSelect = [
   'published_at',
   'shops!inner(slug,name,status)',
   'product_variants(id,title,price_cents,currency,stock_on_hand,stock_reserved,active)',
-  'product_evidence(kind,status,issuer_name,reference_number,scope,public_summary)',
+  'product_evidence(kind,status,issuer_name,reference_number,scope,public_summary,valid_from,valid_until)',
   'product_media(storage_path,status,position,alt_text,width,height)',
 ].join(',');
 
@@ -110,9 +114,13 @@ function mapRow(row: CatalogRow, signedByPath: Map<string, string>): Product | n
   const variant = row.product_variants
     .filter((item) => item.active && item.price_cents > 0)
     .sort((a, b) => a.price_cents - b.price_cents)[0];
-  const evidence = row.product_evidence.find(
-    (item) => item.status === 'approved' && item.public_summary,
-  );
+  const today = new Date().toISOString().slice(0, 10);
+  const evidence = row.product_evidence
+    .filter((item) => item.status === 'approved'
+      && item.public_summary
+      && (!item.valid_from || item.valid_from <= today)
+      && (!item.valid_until || item.valid_until >= today))
+    .sort((a, b) => (b.valid_until ?? '9999-12-31').localeCompare(a.valid_until ?? '9999-12-31'))[0];
   const media = row.product_media
     .filter((item) => item.status === 'approved' && signedByPath.has(item.storage_path))
     .sort((a, b) => a.position - b.position);
@@ -140,6 +148,8 @@ function mapRow(row: CatalogRow, signedByPath: Map<string, string>): Product | n
       referenceNumber: evidence.reference_number,
       scope: evidence.scope,
       publicSummary: evidence.public_summary,
+      validFrom: evidence.valid_from,
+      validUntil: evidence.valid_until,
     },
     media: media.map((item) => ({
       url: signedByPath.get(item.storage_path)!,

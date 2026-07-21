@@ -70,6 +70,14 @@ function createPublicClient() {
   });
 }
 
+function isCurrentEvidence(item: Pick<PublicCatalogRow["product_evidence"][number], "status" | "public_summary" | "valid_from" | "valid_until">) {
+  const today = new Date().toISOString().slice(0, 10);
+  return item.status === "approved"
+    && Boolean(item.public_summary)
+    && (!item.valid_from || item.valid_from <= today)
+    && (!item.valid_until || item.valid_until >= today);
+}
+
 function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string>, preferredVariantId?: string): PublicProduct | null {
   const eligibleVariants = row.product_variants
     .filter((item) => item.active && item.price_cents > 0)
@@ -80,9 +88,9 @@ function toPublicProduct(row: PublicCatalogRow, signedByPath: Map<string, string
   const variant = (preferredVariantId && eligibleVariants.find((item) => item.id === preferredVariantId))
     || eligibleVariants.find((item) => item.stock_on_hand - item.stock_reserved > 0)
     || eligibleVariants[0];
-  const evidence = row.product_evidence.find(
-    (item) => item.status === "approved" && item.public_summary,
-  );
+  const evidence = row.product_evidence
+    .filter(isCurrentEvidence)
+    .sort((a, b) => (b.valid_until ?? "9999-12-31").localeCompare(a.valid_until ?? "9999-12-31"))[0];
   const media = row.product_media
     .filter((item) => item.status === "approved" && signedByPath.has(item.storage_path))
     .sort((a, b) => a.position - b.position);
