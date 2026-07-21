@@ -27,7 +27,7 @@ export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | n
     const label = viewer.displayName || viewer.email || "Mon compte";
     return (
       <div className="account-entry account-entry-authenticated">
-        <Link href="/compte" className="login-button">
+        <Link href="/compte" className="login-button" aria-label={`Mon compte, ${label}`}>
           <span className="face-icon" aria-hidden="true"><i /><b /></span>
           <span className="account-label">{label}</span>
         </Link>
@@ -43,7 +43,7 @@ export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | n
     <>
       <div className="account-entry">
         <button onClick={() => setOpen("join")} className="join-button">Rejoindre</button>
-        <button onClick={() => setOpen("login")} className="login-button">
+        <button onClick={() => setOpen("login")} className="login-button" aria-label="Mon compte">
           <span className="face-icon" aria-hidden="true"><i /><b /></span>
           <span className="account-label">Mon compte</span>
         </button>
