@@ -38,6 +38,38 @@ export type SellerProduct = {
   mediaCount: number;
 };
 
+export type SellerProductDetail = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  status: "draft" | "under_review" | "published" | "rejected" | "archived";
+  editable: boolean;
+  variants: Array<{
+    id: string;
+    sku: string;
+    title: string;
+    priceCents: number;
+    currency: string;
+    stockOnHand: number;
+    stockReserved: number;
+    active: boolean;
+  }>;
+  evidence: Array<{
+    id: string;
+    kind: "seller_declaration" | "documentary_review" | "third_party_certificate" | "laboratory_analysis";
+    status: "pending" | "approved" | "rejected" | "expired" | "revoked";
+    scope: string;
+    issuerName: string | null;
+    referenceNumber: string | null;
+    publicSummary: string | null;
+    validFrom: string | null;
+    validUntil: string | null;
+    createdAt: string;
+  }>;
+};
+
 export type SellerProductMedia = {
   id: string;
   productId: string;
@@ -322,4 +354,62 @@ export const getSellerProductMedia = cache(async (productId: string): Promise<Se
     storagePath: item.storage_path,
     signedUrl: signedByPath.get(item.storage_path) ?? null,
   }));
+});
+
+export const getSellerProduct = cache(async (productId: string): Promise<SellerProductDetail | null> => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+  const supabase = await createClient();
+  const { data: product } = await supabase
+    .from("products")
+    .select("id, slug, title, description, category, status")
+    .eq("id", productId)
+    .eq("shop_id", dashboard.shop.id)
+    .maybeSingle();
+  if (!product) return null;
+
+  const [{ data: variants }, { data: evidence }] = await Promise.all([
+    supabase
+      .from("product_variants")
+      .select("id, sku, title, price_cents, currency, stock_on_hand, stock_reserved, active")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("product_evidence")
+      .select("id, kind, status, scope, issuer_name, reference_number, public_summary, valid_from, valid_until, created_at")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    title: product.title,
+    description: product.description ?? "",
+    category: product.category,
+    status: product.status,
+    editable: product.status === "draft" || product.status === "rejected",
+    variants: (variants ?? []).map((variant) => ({
+      id: variant.id,
+      sku: variant.sku,
+      title: variant.title,
+      priceCents: variant.price_cents,
+      currency: variant.currency,
+      stockOnHand: variant.stock_on_hand,
+      stockReserved: variant.stock_reserved,
+      active: variant.active,
+    })),
+    evidence: (evidence ?? []).map((proof) => ({
+      id: proof.id,
+      kind: proof.kind,
+      status: proof.status,
+      scope: proof.scope,
+      issuerName: proof.issuer_name,
+      referenceNumber: proof.reference_number,
+      publicSummary: proof.public_summary,
+      validFrom: proof.valid_from,
+      validUntil: proof.valid_until,
+      createdAt: proof.created_at,
+    })),
+  };
 });

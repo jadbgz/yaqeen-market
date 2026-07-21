@@ -24,7 +24,7 @@ test.describe("public marketplace navigation", () => {
     await page.getByRole("button", { name: "Rechercher" }).click();
 
     await expect(page).toHaveURL(/\/catalogue\?q=musc(?:\+|%20)blanc$/);
-    await expect(page.getByText("Filtres actifs")).toBeVisible();
+    await expect(page.getByText("Filtres actifs").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /“musc blanc”/ })).toBeVisible();
   });
 

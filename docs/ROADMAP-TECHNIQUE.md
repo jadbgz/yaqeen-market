@@ -65,9 +65,9 @@ Critère de sortie : aucun produit publiable sans média approuvé, accessible e
 
 État compte : carnet d'adresses RPC-only, historique réel, récupération et changement de mot de passe, ainsi que demande de suppression réversible à 30 jours livrés sur le web et Expo le 18 juillet 2026. Sur iOS/Android, la session est conservée dans Keychain/Keystore via SecureStore. La suppression finale reste volontairement réservée à un worker de confiance appliquant la politique de conservation.
 
-- permettre l'édition d'un brouillon et le retour en brouillon après rejet ;
-- prendre en charge plusieurs variantes et plusieurs preuves ;
-- expirer les preuves arrivées à échéance et retirer automatiquement les produits non conformes ;
+- [x] permettre l'édition d'un brouillon et le retour en brouillon après rejet ;
+- [x] prendre en charge plusieurs variantes et plusieurs preuves ;
+- [x] retirer immédiatement du catalogue et du checkout les produits sans preuve actuelle ; planifier le worker quotidien d'expiration sur Supabase hébergé ;
 - [x] ajouter adresses sécurisées, historique de commandes, récupération de mot de passe et demande de suppression de compte ;
 - [ ] automatiser la suppression finale après validation de la politique de conservation et des objets Storage.
 
