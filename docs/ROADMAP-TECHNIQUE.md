@@ -108,7 +108,7 @@ Cette phase commence avant l'ouverture publique et avance en parallèle de la ph
 3. MFA obligatoire pour les rôles opérateur et administrateur ;
 4. monitoring front/serveur et alertes sur les webhooks ;
 5. staging isolé, sauvegardes et restauration effectivement testée ;
-6. tests E2E du parcours complet et tests d'attaque continus ;
+6. [x] socle E2E public bureau/mobile ; compléter par le parcours de commande sur staging et maintenir les tests d'attaque continus ;
 7. pentest externe avant ouverture publique.
 
 Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent être validés avec des professionnels compétents. Le code seul ne constitue pas une validation juridique.

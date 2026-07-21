@@ -72,4 +72,8 @@ npm run db:lint
 npm run lint
 npm run typecheck
 npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
+
+Les tests E2E démarrent Next.js sur le port `3100` et vérifient les parcours publics sur des profils bureau et mobile. Le parcours de commande connecté nécessite l'environnement de staging et sera activé séparément.

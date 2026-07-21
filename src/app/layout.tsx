@@ -23,6 +23,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col"><div className="prototype-banner">VERSION DE DÉVELOPPEMENT · PAIEMENT STRIPE EN BAC À SABLE UNIQUEMENT</div><CartProvider>{children}</CartProvider></body>
