@@ -20,11 +20,14 @@ Sans configuration ou en cas d'erreur réseau, l'application affiche un état ex
 
 Le paiement natif exige `EXPO_PUBLIC_SITE_URL` (HTTPS hors développement) et une clé `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` commençant par `pk_test_`. Apple Pay et Google Pay restent désactivés tant que les identifiants marchands et les builds de développement dédiés ne sont pas validés.
 
+Les builds utilisent des identités séparées : `yaqeen-dev://`, `yaqeen-preview://` et `yaqeen://`. Ajouter le callback `/auth/callback` correspondant dans Supabase Auth. Les profils EAS, variables et gates sont décrits dans `../../docs/MOBILE-RELEASE.md`.
+
 ## Contrôles
 
 ```bash
 npm run lint
-npx tsc --noEmit
+npm run typecheck
+npm run doctor
 npx expo export --platform web
 npx expo export --platform android
 npx expo export --platform ios

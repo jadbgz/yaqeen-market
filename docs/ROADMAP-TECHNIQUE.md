@@ -117,6 +117,8 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 - [x] partager authentification, compte, adresses et historique de commandes entre Expo et le web ;
 - [x] partager la réservation de commande et le checkout test avec iOS/Android via PaymentSheet ;
+- [x] isoler les identités development, preview et production et versionner les profils EAS reproductibles ;
+- [ ] lier le projet Expo externe, configurer les environnements EAS et produire les premiers binaires internes sur appareils physiques ;
 - ajouter les notifications push transactionnelles ;
 - valider les exigences App Store et Play Store, puis publier sur les deux stores ;
 - instrumenter le funnel réel sans inventer de métriques ;

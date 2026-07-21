@@ -10,6 +10,7 @@
     "expo": "~57.0.7",
     "expo-constants": "~57.0.3",
     "expo-crypto": "~57.0.1",
+    "expo-dev-client": "~57.0.7",
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.0",
     "expo-glass-effect": "~57.0.1",
@@ -36,6 +37,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.0",
+    "expo-doctor": "^1.20.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -44,7 +46,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "doctor": "expo-doctor",
+    "release:check": "node scripts/validate-release-env.mjs",
+    "eas-build-pre-install": "npm run release:check"
   },
   "private": true
 }
