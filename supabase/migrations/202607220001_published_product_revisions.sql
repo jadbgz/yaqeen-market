@@ -337,15 +337,15 @@ set search_path = ''
 as $$
 declare
   current_user_id uuid := (select auth.uid());
-  target_variant public.product_variants;
+  target_stock_reserved integer;
   target_shop_id uuid;
   target_product_status public.product_status;
 begin
   if current_user_id is null then raise exception using errcode = '42501', message = 'authentication_required'; end if;
   if requested_stock_on_hand is null or requested_stock_on_hand not between 0 and 1000000 then raise exception using errcode = '22023', message = 'invalid_stock'; end if;
 
-  select variant, product.shop_id, product.status
-  into target_variant, target_shop_id, target_product_status
+  select variant.stock_reserved, product.shop_id, product.status
+  into target_stock_reserved, target_shop_id, target_product_status
   from public.product_variants variant
   join public.products product on product.id = variant.product_id
   where variant.id = requested_variant_id
@@ -355,7 +355,7 @@ begin
     raise exception using errcode = '42501', message = 'variant_ownership_required';
   end if;
   if target_product_status <> 'published' then raise exception using errcode = '55000', message = 'published_product_required'; end if;
-  if requested_stock_on_hand < target_variant.stock_reserved then raise exception using errcode = '22023', message = 'stock_below_reserved'; end if;
+  if requested_stock_on_hand < target_stock_reserved then raise exception using errcode = '22023', message = 'stock_below_reserved'; end if;
 
   update public.product_variants set
     stock_on_hand = requested_stock_on_hand,
