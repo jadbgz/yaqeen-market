@@ -89,3 +89,34 @@ export async function reviewRevisionAction(formData: FormData) {
   revalidatePath("/produit/[shopSlug]/[productSlug]", "page");
   redirect("/operations/moderation?reviewed=revision");
 }
+
+export async function reviewEvidenceRenewalAction(formData: FormData) {
+  await requireOperator();
+  const schema = decisionSchema.extend({ evidenceId: z.string().uuid(), publicSummary: z.string().trim().max(1000) }).superRefine((data, context) => {
+    if (data.decision === "approved" && data.publicSummary.length < 20) context.addIssue({ code: "custom", path: ["publicSummary"], message: "Résumé public requis." });
+  });
+  const parsed = schema.safeParse({
+    evidenceId: formData.get("evidenceId"),
+    decision: formData.get("decision"),
+    rationale: formData.get("rationale"),
+    publicSummary: formData.get("publicSummary") ?? "",
+  });
+  if (!parsed.success) redirect("/operations/moderation?error=decision_invalide");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_published_product_evidence", {
+    requested_evidence_id: parsed.data.evidenceId,
+    requested_decision: parsed.data.decision,
+    requested_rationale: parsed.data.rationale,
+    requested_public_summary: parsed.data.publicSummary || null,
+  });
+  if (error) redirect("/operations/moderation?error=preuve_incomplete");
+
+  revalidatePath("/");
+  revalidatePath("/catalogue");
+  revalidatePath("/operations/moderation");
+  revalidatePath("/seller/produits");
+  revalidatePath("/boutique/[slug]", "page");
+  revalidatePath("/produit/[shopSlug]/[productSlug]", "page");
+  redirect("/operations/moderation?reviewed=evidence");
+}

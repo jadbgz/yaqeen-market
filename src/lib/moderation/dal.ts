@@ -12,7 +12,7 @@ export type ModerationQueue = {
     category: string;
     description: string | null;
     shopName: string;
-    evidence: Array<{ id: string; kind: string; scope: string; issuerName: string | null; referenceNumber: string | null; proposedSummary: string | null; validFrom: string | null; validUntil: string | null }>;
+    evidence: Array<{ id: string; kind: string; scope: string; issuerName: string | null; referenceNumber: string | null; proposedSummary: string | null; validFrom: string | null; validUntil: string | null; document: { originalFilename: string; signedUrl: string | null } | null }>;
     variants: Array<{ title: string; sku: string; priceCents: number; stock: number }>;
     media: Array<{ id: string; position: number; altText: string; width: number; height: number; byteSize: number; signedUrl: string | null }>;
   }>;
@@ -30,6 +30,21 @@ export type ModerationQueue = {
       live: { title: string; sku: string; priceCents: number; stock: number; reserved: number; active: boolean } | null;
     }>;
   }>;
+  evidenceRenewals: Array<{
+    id: string;
+    productId: string;
+    productTitle: string;
+    shopName: string;
+    kind: string;
+    scope: string;
+    issuerName: string | null;
+    referenceNumber: string | null;
+    proposedSummary: string | null;
+    validFrom: string | null;
+    validUntil: string | null;
+    currentSummary: string | null;
+    document: { originalFilename: string; byteSize: number; sha256: string; signedUrl: string | null } | null;
+  }>;
 };
 
 export const getModerationQueue = cache(async (): Promise<ModerationQueue | null> => {
@@ -37,10 +52,11 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
   if (!viewer || (viewer.role !== "operator" && viewer.role !== "admin")) return null;
 
   const supabase = await createClient();
-  const [{ data: shops }, { data: products }, { data: revisions }] = await Promise.all([
+  const [{ data: shops }, { data: products }, { data: revisions }, { data: pendingEvidence }] = await Promise.all([
     supabase.from("shops").select("id, name, slug, description, ships_from_country").eq("status", "under_review").order("created_at"),
     supabase.from("products").select("id, shop_id, title, category, description").eq("status", "under_review").order("created_at"),
     supabase.from("product_revisions").select("id, product_id, revision_number, title, slug, description, category").eq("status", "under_review").order("submitted_at"),
+    supabase.from("product_evidence").select("id, product_id, kind, scope, issuer_name, reference_number, public_summary, valid_from, valid_until").eq("status", "pending").order("created_at").limit(100),
   ]);
 
   const productRows = products ?? [];
@@ -74,6 +90,26 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
     revisionShopIds.length ? supabase.from("shops").select("id, name").in("id", revisionShopIds) : Promise.resolve({ data: [] }),
     liveVariantIds.length ? supabase.from("product_variants").select("id, title, sku, price_cents, stock_on_hand, stock_reserved, active").in("id", liveVariantIds) : Promise.resolve({ data: [] }),
   ]);
+  const renewalCandidates = pendingEvidence ?? [];
+  const renewalProductIds = [...new Set(renewalCandidates.map((proof) => proof.product_id))];
+  const { data: renewalProducts } = renewalProductIds.length
+    ? await supabase.from("products").select("id, shop_id, title, verification_summary, status").in("id", renewalProductIds).eq("status", "published")
+    : { data: [] };
+  const renewalProductRows = renewalProducts ?? [];
+  const publishedRenewalIds = new Set(renewalProductRows.map((product) => product.id));
+  const renewalRows = renewalCandidates.filter((proof) => publishedRenewalIds.has(proof.product_id));
+  const renewalIds = renewalRows.map((proof) => proof.id);
+  const dossierEvidenceIds = [...new Set([...renewalIds, ...(evidence ?? []).map((proof) => proof.id)])];
+  const renewalShopIds = [...new Set(renewalProductRows.map((product) => product.shop_id))];
+  const [{ data: evidenceDocuments }, { data: renewalShops }] = await Promise.all([
+    dossierEvidenceIds.length ? supabase.from("product_evidence_documents").select("evidence_id, storage_path, original_filename, byte_size, sha256").in("evidence_id", dossierEvidenceIds) : Promise.resolve({ data: [] }),
+    renewalShopIds.length ? supabase.from("shops").select("id, name").in("id", renewalShopIds) : Promise.resolve({ data: [] }),
+  ]);
+  const evidenceDocumentRows = evidenceDocuments ?? [];
+  const { data: signedEvidenceDocuments } = evidenceDocumentRows.length
+    ? await supabase.storage.from("product-evidence").createSignedUrls(evidenceDocumentRows.map((document) => document.storage_path), 600, { download: true })
+    : { data: [] };
+  const signedEvidenceByPath = new Map((signedEvidenceDocuments ?? []).map((item) => [item.path, item.signedUrl]));
 
   return {
     shops: (shops ?? []).map((shop) => ({ id: shop.id, name: shop.name, slug: shop.slug, description: shop.description, country: shop.ships_from_country })),
@@ -86,7 +122,10 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
         category: product.category,
         description: product.description,
         shopName: productShops?.find((shop) => shop.id === product.shop_id)?.name ?? "Boutique inconnue",
-        evidence: productEvidence.map((proof) => ({ id: proof.id, kind: proof.kind, scope: proof.scope, issuerName: proof.issuer_name, referenceNumber: proof.reference_number, proposedSummary: proof.public_summary, validFrom: proof.valid_from, validUntil: proof.valid_until })),
+        evidence: productEvidence.map((proof) => {
+          const document = evidenceDocumentRows.find((item) => item.evidence_id === proof.id);
+          return { id: proof.id, kind: proof.kind, scope: proof.scope, issuerName: proof.issuer_name, referenceNumber: proof.reference_number, proposedSummary: proof.public_summary, validFrom: proof.valid_from, validUntil: proof.valid_until, document: document ? { originalFilename: document.original_filename, signedUrl: signedEvidenceByPath.get(document.storage_path) ?? null } : null };
+        }),
         variants: productVariants.map((variant) => ({ title: variant.title, sku: variant.sku, priceCents: variant.price_cents, stock: variant.stock_on_hand })),
         media: mediaRows.filter((item) => item.product_id === product.id).map((item) => ({
           id: item.id,
@@ -118,6 +157,31 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
             live: live ? { title: live.title, sku: live.sku, priceCents: live.price_cents, stock: live.stock_on_hand, reserved: live.stock_reserved, active: live.active } : null,
           };
         }),
+      }];
+    }),
+    evidenceRenewals: renewalRows.flatMap((proof) => {
+      const product = renewalProductRows.find((item) => item.id === proof.product_id);
+      if (!product) return [];
+      const document = evidenceDocumentRows.find((item) => item.evidence_id === proof.id);
+      return [{
+        id: proof.id,
+        productId: proof.product_id,
+        productTitle: product.title,
+        shopName: renewalShops?.find((shop) => shop.id === product.shop_id)?.name ?? "Boutique inconnue",
+        kind: proof.kind,
+        scope: proof.scope,
+        issuerName: proof.issuer_name,
+        referenceNumber: proof.reference_number,
+        proposedSummary: proof.public_summary,
+        validFrom: proof.valid_from,
+        validUntil: proof.valid_until,
+        currentSummary: product.verification_summary,
+        document: document ? {
+          originalFilename: document.original_filename,
+          byteSize: document.byte_size,
+          sha256: document.sha256,
+          signedUrl: signedEvidenceByPath.get(document.storage_path) ?? null,
+        } : null,
       }];
     }),
   };
