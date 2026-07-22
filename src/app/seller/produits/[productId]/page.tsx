@@ -133,9 +133,9 @@ export default async function SellerProductEditorPage({
         <section className="seller-editor-block seller-editor-trust">
           <header><div><span>03</span><p>REGISTRE DE CONFIANCE</p><h2>{product.evidence.length} preuve{product.evidence.length > 1 ? "s" : ""}</h2></div><small>Les décisions passées restent visibles ; seule une preuve en cours de validité permet la vente.</small></header>
           <div className="seller-evidence-history">
-            {product.evidence.map((proof) => <article key={proof.id}><div><span className={`seller-state seller-state-${proof.status}`}>{evidenceLabels[proof.status]}</span><strong>{kindLabels[proof.kind]}</strong><small>{proof.validFrom || proof.validUntil ? `Validité : ${proof.validFrom ?? "—"} → ${proof.validUntil ?? "sans fin"}` : "Validité non bornée"}</small></div><p>{proof.scope}</p><p>{proof.publicSummary}</p>{proof.status === "pending" && product.editable && <form action={discardEvidenceAction}><input type="hidden" name="productId" value={product.id} /><input type="hidden" name="evidenceId" value={proof.id} /><button type="submit">Retirer cette soumission</button></form>}</article>)}
+            {product.evidence.map((proof) => <article key={proof.id}><div><span className={`seller-state seller-state-${proof.status}`}>{evidenceLabels[proof.status]}</span><strong>{kindLabels[proof.kind]}</strong><small>{proof.validFrom || proof.validUntil ? `Validité : ${proof.validFrom ?? "—"} → ${proof.validUntil ?? "sans fin"}` : "Validité non bornée"}</small></div><p>{proof.scope}</p><p>{proof.publicSummary}</p><div className="seller-evidence-actions">{(proof.document || proof.status === "pending") && <Link href={`/seller/produits/${product.id}/preuves/${proof.id}`}>{proof.document ? "Consulter le dossier privé" : "Ajouter le document privé"} →</Link>}{proof.status === "pending" && (product.editable || product.status === "published") && !proof.document && <form action={discardEvidenceAction}><input type="hidden" name="productId" value={product.id} /><input type="hidden" name="evidenceId" value={proof.id} /><button type="submit">Retirer cette soumission</button></form>}</div></article>)}
           </div>
-          {product.editable && <form action={addEvidenceAction} className="seller-product-form seller-form-grid seller-evidence-new">
+          {(product.editable || product.status === "published") && !product.evidence.some((proof) => proof.status === "pending") && <form action={addEvidenceAction} className="seller-product-form seller-form-grid seller-evidence-new">
             <input type="hidden" name="productId" value={product.id} />
             <label>Nature<select name="evidenceKind" defaultValue="seller_declaration"><option value="seller_declaration">Déclaration du vendeur</option><option value="third_party_certificate">Certificat tiers</option></select></label>
             <label className="seller-field-wide">Périmètre<textarea name="evidenceScope" required minLength={10} maxLength={2000} rows={3} placeholder="Ce que cette preuve établit précisément." /></label>
@@ -143,7 +143,7 @@ export default async function SellerProductEditorPage({
             <label>Référence<input name="referenceNumber" maxLength={180} placeholder="Obligatoire pour un certificat" /></label>
             <label>Début de validité<input name="validFrom" type="date" /></label><label>Fin de validité<input name="validUntil" type="date" /></label>
             <label className="seller-field-wide">Résumé public proposé<textarea name="publicSummary" required minLength={20} maxLength={1000} rows={3} /></label>
-            <button className="seller-editor-submit" type="submit">Ajouter à la revue →</button>
+            <button className="seller-editor-submit" type="submit">{product.status === "published" ? "Préparer le renouvellement →" : "Ajouter à la revue →"}</button>
           </form>}
         </section>
 

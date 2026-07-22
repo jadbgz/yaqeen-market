@@ -129,7 +129,7 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 1. [x] pagination, recherche et filtres SQL du catalogue ;
 2. [x] cycle éditorial des brouillons et révisions atomiques des produits publiés ;
-3. dossier documentaire privé des preuves, renouvellement sans interruption et politique de rétention ;
+3. [x] dossier documentaire privé des preuves et renouvellement sans interruption ; brancher quarantaine antivirus/CDR et politique de rétention avant ouverture publique ;
 4. environnement staging relié à Supabase/Stripe, smoke tests de paiement et parcours E2E authentifiés ;
 5. rate limiting distribué, MFA opérateur, observabilité et alertes webhooks ;
 6. premiers binaires EAS internes sur appareils iOS et Android physiques.

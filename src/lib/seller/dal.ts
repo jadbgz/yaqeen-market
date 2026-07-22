@@ -67,6 +67,13 @@ export type SellerProductDetail = {
     validFrom: string | null;
     validUntil: string | null;
     createdAt: string;
+    document: {
+      id: string;
+      storagePath: string;
+      originalFilename: string;
+      byteSize: number;
+      sha256: string;
+    } | null;
   }>;
 };
 
@@ -404,6 +411,13 @@ export const getSellerProduct = cache(async (productId: string): Promise<SellerP
       .eq("product_id", productId)
       .order("created_at", { ascending: false }),
   ]);
+  const evidenceIds = (evidence ?? []).map((proof) => proof.id);
+  const { data: documents } = evidenceIds.length
+    ? await supabase
+      .from("product_evidence_documents")
+      .select("id, evidence_id, storage_path, original_filename, byte_size, sha256")
+      .in("evidence_id", evidenceIds)
+    : { data: [] };
 
   return {
     id: product.id,
@@ -423,18 +437,28 @@ export const getSellerProduct = cache(async (productId: string): Promise<SellerP
       stockReserved: variant.stock_reserved,
       active: variant.active,
     })),
-    evidence: (evidence ?? []).map((proof) => ({
-      id: proof.id,
-      kind: proof.kind,
-      status: proof.status,
-      scope: proof.scope,
-      issuerName: proof.issuer_name,
-      referenceNumber: proof.reference_number,
-      publicSummary: proof.public_summary,
-      validFrom: proof.valid_from,
-      validUntil: proof.valid_until,
-      createdAt: proof.created_at,
-    })),
+    evidence: (evidence ?? []).map((proof) => {
+      const document = documents?.find((item) => item.evidence_id === proof.id);
+      return {
+        id: proof.id,
+        kind: proof.kind,
+        status: proof.status,
+        scope: proof.scope,
+        issuerName: proof.issuer_name,
+        referenceNumber: proof.reference_number,
+        publicSummary: proof.public_summary,
+        validFrom: proof.valid_from,
+        validUntil: proof.valid_until,
+        createdAt: proof.created_at,
+        document: document ? {
+          id: document.id,
+          storagePath: document.storage_path,
+          originalFilename: document.original_filename,
+          byteSize: document.byte_size,
+          sha256: document.sha256,
+        } : null,
+      };
+    }),
   };
 });
 
