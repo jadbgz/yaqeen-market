@@ -67,6 +67,7 @@ Critère de sortie : aucun produit publiable sans média approuvé, accessible e
 
 - [x] permettre l'édition d'un brouillon et le retour en brouillon après rejet ;
 - [x] prendre en charge plusieurs variantes et plusieurs preuves ;
+- [x] faire évoluer un produit publié par révision privée sans interrompre sa vente ni écraser son inventaire vivant ;
 - [x] retirer immédiatement du catalogue et du checkout les produits sans preuve actuelle ; planifier le worker quotidien d'expiration sur Supabase hébergé ;
 - [x] ajouter adresses sécurisées, historique de commandes, récupération de mot de passe et demande de suppression de compte ;
 - [ ] automatiser la suppression finale après validation de la politique de conservation et des objets Storage.
@@ -126,12 +127,12 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 
 ## Ordre d'exécution immédiat
 
-1. pagination, recherche et filtres SQL du catalogue ;
-2. édition des fiches, variantes multiples et expiration des preuves ;
-3. [x] adaptateur Stripe en mode test, Account Links et handler webhook signé ;
-4. [x] checkout web avec réservation, confirmation et consommation atomique du stock ;
-5. transferts vendeurs idempotents, politique de libération et rapprochement ;
-6. tests E2E des liens Auth web/mobile et configuration des domaines de redirection de production.
+1. [x] pagination, recherche et filtres SQL du catalogue ;
+2. [x] cycle éditorial des brouillons et révisions atomiques des produits publiés ;
+3. dossier documentaire privé des preuves, renouvellement sans interruption et politique de rétention ;
+4. environnement staging relié à Supabase/Stripe, smoke tests de paiement et parcours E2E authentifiés ;
+5. rate limiting distribué, MFA opérateur, observabilité et alertes webhooks ;
+6. premiers binaires EAS internes sur appareils iOS et Android physiques.
 
 ## Garde-fous permanents
 

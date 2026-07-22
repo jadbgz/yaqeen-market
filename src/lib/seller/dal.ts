@@ -70,6 +70,30 @@ export type SellerProductDetail = {
   }>;
 };
 
+export type SellerProductRevision = {
+  id: string;
+  productId: string;
+  revisionNumber: number;
+  status: "draft" | "under_review" | "approved" | "rejected" | "withdrawn";
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  submittedAt: string | null;
+  reviewRationale: string | null;
+  editable: boolean;
+  variants: Array<{
+    id: string;
+    sourceVariantId: string | null;
+    sku: string;
+    title: string;
+    priceCents: number;
+    currency: string;
+    stockOnHand: number;
+    active: boolean;
+  }>;
+};
+
 export type SellerProductMedia = {
   id: string;
   productId: string;
@@ -410,6 +434,59 @@ export const getSellerProduct = cache(async (productId: string): Promise<SellerP
       validFrom: proof.valid_from,
       validUntil: proof.valid_until,
       createdAt: proof.created_at,
+    })),
+  };
+});
+
+export const getSellerProductRevision = cache(async (productId: string): Promise<SellerProductRevision | null> => {
+  const dashboard = await getSellerDashboard();
+  if (!dashboard) return null;
+  const supabase = await createClient();
+  const { data: product } = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", productId)
+    .eq("shop_id", dashboard.shop.id)
+    .maybeSingle();
+  if (!product) return null;
+
+  const { data: revision } = await supabase
+    .from("product_revisions")
+    .select("id, product_id, revision_number, status, title, slug, description, category, submitted_at, review_rationale")
+    .eq("product_id", productId)
+    .in("status", ["draft", "under_review", "rejected"])
+    .order("revision_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!revision) return null;
+
+  const { data: variants } = await supabase
+    .from("product_revision_variants")
+    .select("id, source_variant_id, sku, title, price_cents, currency, stock_on_hand, active")
+    .eq("revision_id", revision.id)
+    .order("created_at", { ascending: true });
+
+  return {
+    id: revision.id,
+    productId: revision.product_id,
+    revisionNumber: revision.revision_number,
+    status: revision.status,
+    title: revision.title,
+    slug: revision.slug,
+    description: revision.description,
+    category: revision.category,
+    submittedAt: revision.submitted_at,
+    reviewRationale: revision.review_rationale,
+    editable: revision.status === "draft" || revision.status === "rejected",
+    variants: (variants ?? []).map((variant) => ({
+      id: variant.id,
+      sourceVariantId: variant.source_variant_id,
+      sku: variant.sku,
+      title: variant.title,
+      priceCents: variant.price_cents,
+      currency: variant.currency,
+      stockOnHand: variant.stock_on_hand,
+      active: variant.active,
     })),
   };
 });

@@ -63,3 +63,29 @@ export async function reviewProductAction(formData: FormData) {
   revalidatePath("/catalogue");
   redirect("/operations/moderation?reviewed=product");
 }
+
+export async function reviewRevisionAction(formData: FormData) {
+  await requireOperator();
+  const parsed = decisionSchema.extend({ revisionId: z.string().uuid() }).safeParse({
+    revisionId: formData.get("revisionId"),
+    decision: formData.get("decision"),
+    rationale: formData.get("rationale"),
+  });
+  if (!parsed.success) redirect("/operations/moderation?error=decision_invalide");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_product_revision", {
+    requested_revision_id: parsed.data.revisionId,
+    requested_decision: parsed.data.decision,
+    requested_rationale: parsed.data.rationale,
+  });
+  if (error) redirect(`/operations/moderation?error=${error.message.includes("base_changed") ? "revision_obsolete" : "transition_refusee"}`);
+
+  revalidatePath("/seller");
+  revalidatePath("/seller/produits");
+  revalidatePath("/operations/moderation");
+  revalidatePath("/catalogue");
+  revalidatePath("/boutique/[slug]", "page");
+  revalidatePath("/produit/[shopSlug]/[productSlug]", "page");
+  redirect("/operations/moderation?reviewed=revision");
+}

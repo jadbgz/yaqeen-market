@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SellerChrome } from "@/components/seller-chrome";
 import { getViewer } from "@/lib/auth/dal";
-import { getSellerDashboard, getSellerProduct } from "@/lib/seller/dal";
+import { getSellerDashboard, getSellerProduct, getSellerProductRevision } from "@/lib/seller/dal";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { submitProductForReview } from "../../review-actions";
 import {
@@ -10,8 +10,10 @@ import {
   deactivateVariantAction,
   discardEvidenceAction,
   saveVariantAction,
+  setPublishedInventoryAction,
   updateProductAction,
 } from "./actions";
+import { startRevisionAction } from "./revision/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,10 @@ type EditorSearch = {
   sku_error?: string;
   evidence_saved?: string;
   evidence_error?: string;
+  inventory_saved?: string;
+  inventory_error?: string;
+  revision_error?: string;
+  revision_withdrawn?: string;
 };
 
 export default async function SellerProductEditorPage({
@@ -50,16 +56,17 @@ export default async function SellerProductEditorPage({
 }) {
   if (!getSupabaseConfig()) redirect("/seller");
   const [{ productId }, query] = await Promise.all([params, searchParams]);
-  const [viewer, dashboard, product] = await Promise.all([
+  const [viewer, dashboard, product, revision] = await Promise.all([
     getViewer(),
     getSellerDashboard(),
     getSellerProduct(productId),
+    getSellerProductRevision(productId),
   ]);
   if (!viewer || !dashboard) redirect("/seller");
   if (!product) notFound();
   const userName = viewer.displayName || viewer.email?.split("@")[0] || "Membre";
-  const success = query.content_saved || query.variant_saved || query.evidence_saved;
-  const error = query.content_error || query.slug_error || query.variant_error || query.sku_error || query.evidence_error;
+  const success = query.content_saved || query.variant_saved || query.evidence_saved || query.inventory_saved;
+  const error = query.content_error || query.slug_error || query.variant_error || query.sku_error || query.evidence_error || query.inventory_error;
 
   return (
     <SellerChrome shopName={dashboard.shop.name} shopStatus={dashboard.shop.status} userName={userName} activeRoute="products">
@@ -80,6 +87,10 @@ export default async function SellerProductEditorPage({
 
         {success && <div className="seller-success" role="status"><span>✓</span><div><strong>Modification enregistrée.</strong><p>La base a validé l’autorisation et l’intégrité de l’opération.</p></div></div>}
         {error && <div className="seller-form-feedback" role="alert">Modification refusée. Vérifiez les formats, l’unicité du slug ou du SKU, les dates et le stock déjà réservé.</div>}
+        {query.revision_withdrawn && <div className="seller-success" role="status"><span>✓</span><div><strong>Révision retirée.</strong><p>La version actuellement publiée n’a jamais été modifiée.</p></div></div>}
+        {query.revision_error && <div className="seller-form-feedback" role="alert">La révision n’a pas pu être ouverte. Vérifiez l’état public du produit et votre accès à la boutique.</div>}
+
+        {product.status === "published" && <section className="seller-live-revision-card"><div><p>VERSION PUBLIQUE PROTÉGÉE</p><h2>{revision ? `Révision n°${revision.revisionNumber} · ${revision.status}` : "Faire évoluer cette fiche sans couper sa vente."}</h2><span>{revision ? "La proposition est isolée : les clients continuent à voir la version approuvée jusqu’à la décision opérateur." : "Yaqeen crée un instantané complet. Vos changements restent privés jusqu’à leur approbation atomique."}</span></div>{revision ? <Link href={`/seller/produits/${product.id}/revision`}>Ouvrir la révision →</Link> : <form action={startRevisionAction}><input type="hidden" name="productId" value={product.id}/><button type="submit">Préparer une révision →</button></form>}</section>}
 
         <section className="seller-editor-block">
           <header><div><span>01</span><p>CONTENU CLIENT</p><h2>Identité de la fiche</h2></div><small>Éditable uniquement en brouillon ou après un refus.</small></header>
@@ -102,9 +113,9 @@ export default async function SellerProductEditorPage({
                 <label>Format<input name="variantTitle" defaultValue={variant.title} required disabled={!product.editable} /></label>
                 <label>SKU<input name="sku" defaultValue={variant.sku} required disabled={!product.editable} /></label>
                 <label>Prix TTC<input name="price" defaultValue={(variant.priceCents / 100).toFixed(2).replace(".", ",")} required inputMode="decimal" disabled={!product.editable} /></label>
-                <label>Stock<input name="stock" type="number" min={variant.stockReserved} max={1000000} defaultValue={variant.stockOnHand} required disabled={!product.editable} /><small>{variant.stockReserved} réservé</small></label>
+                <label>Stock<input name="stock" type="number" min={variant.stockReserved} max={1000000} defaultValue={variant.stockOnHand} required disabled={!product.editable && product.status !== "published"} /><small>{variant.stockReserved} réservé · {variant.stockOnHand - variant.stockReserved} disponible</small></label>
                 <label>État<select name="active" defaultValue={String(variant.active)} disabled={!product.editable}><option value="true">Active</option><option value="false">Inactive</option></select></label>
-                <div><strong>{money.format(variant.priceCents / 100)}</strong>{product.editable && <button type="submit">Mettre à jour</button>}</div>
+                <div><strong>{money.format(variant.priceCents / 100)}</strong>{product.editable && <button type="submit">Mettre à jour</button>}{product.status === "published" && <button type="submit" formAction={setPublishedInventoryAction}>Actualiser le stock</button>}</div>
               </form>
             ))}
           </div>
