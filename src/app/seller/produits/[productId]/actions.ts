@@ -101,6 +101,33 @@ export async function deactivateVariantAction(formData: FormData) {
   redirect(editorHref(product.id, "variant_saved"));
 }
 
+export async function setPublishedInventoryAction(formData: FormData) {
+  const product = await ownedProduct(formData);
+  const parsed = z.object({
+    variantId: z.string().uuid(),
+    stock: z.coerce.number().int().min(0).max(1_000_000),
+  }).safeParse({
+    variantId: formData.get("variantId") ?? "",
+    stock: formData.get("stock") ?? "",
+  });
+  if (!parsed.success || !product.variants.some((variant) => variant.id === parsed.data.variantId)) {
+    redirect(editorHref(product.id, "inventory_error"));
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_published_variant_inventory", {
+    requested_variant_id: parsed.data.variantId,
+    requested_stock_on_hand: parsed.data.stock,
+  });
+  if (error) redirect(editorHref(product.id, "inventory_error"));
+  revalidatePath("/");
+  revalidatePath("/catalogue");
+  revalidatePath("/seller");
+  revalidatePath("/seller/produits");
+  revalidatePath(`/seller/produits/${product.id}`);
+  redirect(editorHref(product.id, "inventory_saved"));
+}
+
 export async function addEvidenceAction(formData: FormData) {
   const product = await ownedProduct(formData);
   const parsed = z.object({

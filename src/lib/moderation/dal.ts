@@ -16,6 +16,20 @@ export type ModerationQueue = {
     variants: Array<{ title: string; sku: string; priceCents: number; stock: number }>;
     media: Array<{ id: string; position: number; altText: string; width: number; height: number; byteSize: number; signedUrl: string | null }>;
   }>;
+  revisions: Array<{
+    id: string;
+    productId: string;
+    revisionNumber: number;
+    shopName: string;
+    live: { title: string; slug: string; description: string | null; category: string };
+    proposed: { title: string; slug: string; description: string; category: string };
+    variants: Array<{
+      id: string;
+      sourceVariantId: string | null;
+      proposed: { title: string; sku: string; priceCents: number; stock: number; active: boolean };
+      live: { title: string; sku: string; priceCents: number; stock: number; reserved: number; active: boolean } | null;
+    }>;
+  }>;
 };
 
 export const getModerationQueue = cache(async (): Promise<ModerationQueue | null> => {
@@ -23,9 +37,10 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
   if (!viewer || (viewer.role !== "operator" && viewer.role !== "admin")) return null;
 
   const supabase = await createClient();
-  const [{ data: shops }, { data: products }] = await Promise.all([
+  const [{ data: shops }, { data: products }, { data: revisions }] = await Promise.all([
     supabase.from("shops").select("id, name, slug, description, ships_from_country").eq("status", "under_review").order("created_at"),
     supabase.from("products").select("id, shop_id, title, category, description").eq("status", "under_review").order("created_at"),
+    supabase.from("product_revisions").select("id, product_id, revision_number, title, slug, description, category").eq("status", "under_review").order("submitted_at"),
   ]);
 
   const productRows = products ?? [];
@@ -42,6 +57,23 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
     ? await supabase.storage.from("product-media").createSignedUrls(mediaRows.map((item) => item.storage_path), 600)
     : { data: [] };
   const signedByPath = new Map((signedMedia ?? []).map((item) => [item.path, item.signedUrl]));
+  const revisionRows = revisions ?? [];
+  const revisionProductIds = [...new Set(revisionRows.map((revision) => revision.product_id))];
+  const revisionIds = revisionRows.map((revision) => revision.id);
+  const [{ data: revisionProducts }, { data: revisionVariants }] = await Promise.all([
+    revisionProductIds.length
+      ? supabase.from("products").select("id, shop_id, title, slug, description, category").in("id", revisionProductIds)
+      : Promise.resolve({ data: [] }),
+    revisionIds.length
+      ? supabase.from("product_revision_variants").select("id, revision_id, source_variant_id, title, sku, price_cents, stock_on_hand, active").in("revision_id", revisionIds).order("created_at")
+      : Promise.resolve({ data: [] }),
+  ]);
+  const revisionShopIds = [...new Set((revisionProducts ?? []).map((product) => product.shop_id))];
+  const liveVariantIds = [...new Set((revisionVariants ?? []).map((variant) => variant.source_variant_id).filter((id): id is string => Boolean(id)))];
+  const [{ data: revisionShops }, { data: liveVariants }] = await Promise.all([
+    revisionShopIds.length ? supabase.from("shops").select("id, name").in("id", revisionShopIds) : Promise.resolve({ data: [] }),
+    liveVariantIds.length ? supabase.from("product_variants").select("id, title, sku, price_cents, stock_on_hand, stock_reserved, active").in("id", liveVariantIds) : Promise.resolve({ data: [] }),
+  ]);
 
   return {
     shops: (shops ?? []).map((shop) => ({ id: shop.id, name: shop.name, slug: shop.slug, description: shop.description, country: shop.ships_from_country })),
@@ -66,6 +98,27 @@ export const getModerationQueue = cache(async (): Promise<ModerationQueue | null
           signedUrl: signedByPath.get(item.storage_path) ?? null,
         })),
       };
+    }),
+    revisions: revisionRows.flatMap((revision) => {
+      const liveProduct = revisionProducts?.find((product) => product.id === revision.product_id);
+      if (!liveProduct) return [];
+      return [{
+        id: revision.id,
+        productId: revision.product_id,
+        revisionNumber: revision.revision_number,
+        shopName: revisionShops?.find((shop) => shop.id === liveProduct.shop_id)?.name ?? "Boutique inconnue",
+        live: { title: liveProduct.title, slug: liveProduct.slug, description: liveProduct.description, category: liveProduct.category },
+        proposed: { title: revision.title, slug: revision.slug, description: revision.description, category: revision.category },
+        variants: (revisionVariants ?? []).filter((variant) => variant.revision_id === revision.id).map((variant) => {
+          const live = variant.source_variant_id ? liveVariants?.find((item) => item.id === variant.source_variant_id) : null;
+          return {
+            id: variant.id,
+            sourceVariantId: variant.source_variant_id,
+            proposed: { title: variant.title, sku: variant.sku, priceCents: variant.price_cents, stock: variant.stock_on_hand, active: variant.active },
+            live: live ? { title: live.title, sku: live.sku, priceCents: live.price_cents, stock: live.stock_on_hand, reserved: live.stock_reserved, active: live.active } : null,
+          };
+        }),
+      }];
     }),
   };
 });
