@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const port = 3100;
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const remoteBaseURL = process.env.PLAYWRIGHT_BASE_URL;
+const baseURL = remoteBaseURL ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -28,7 +29,7 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
     },
   ],
-  webServer: {
+  webServer: remoteBaseURL ? undefined : {
     command: process.env.CI
       ? `npm run start -- --hostname 127.0.0.1 --port ${port}`
       : `npm run dev -- --hostname 127.0.0.1 --port ${port}`,

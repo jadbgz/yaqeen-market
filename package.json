@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:staging": "playwright test --grep @staging --project=desktop-chromium",
+    "release:check:web": "node scripts/validate-web-release-env.mjs",
     "db:start": "supabase db start",
     "db:reset": "supabase db reset --local",
     "db:test": "supabase test db --local",
