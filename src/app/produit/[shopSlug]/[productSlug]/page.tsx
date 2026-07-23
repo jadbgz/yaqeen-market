@@ -7,6 +7,7 @@ import { ProductPurchase } from "@/components/product-purchase";
 import { getPublicProduct, getPublicProducts } from "@/lib/catalog/dal";
 import { formatPrice } from "@/lib/catalog/format";
 import { productHref, shopHref } from "@/lib/catalog/types";
+import { MarketFooter } from "@/components/market-footer";
 
 type ProductRouteProps = {
   params: Promise<{ shopSlug: string; productSlug: string }>;
@@ -71,5 +72,6 @@ export default async function ProductPage({ params, searchParams }: ProductRoute
     <section className="product-proof" aria-labelledby="proof-title"><div><p>LA PREUVE, PAS LE SLOGAN</p><h2 id="proof-title">Ce que nous avons revu<span>.</span></h2></div><dl><div><dt>Périmètre</dt><dd>{product.evidence.scope}</dd></div><div><dt>Nature de la preuve</dt><dd>{product.evidence.kind.replaceAll("_"," ")}</dd></div><div><dt>Émetteur</dt><dd>{product.evidence.issuerName ?? "Déclaration documentée du vendeur"}</dd></div>{product.evidence.referenceNumber&&<div><dt>Référence</dt><dd>{product.evidence.referenceNumber}</dd></div>}<div><dt>Résumé public</dt><dd>{product.evidence.publicSummary}</dd></div></dl></section>
     <section className="product-story"><p>À PROPOS DE CE PRODUIT</p><h2>Vendu par<br/>{product.shop}<span>.</span></h2><div><p>Ce produit est proposé et expédié directement par la boutique {product.shop}. Le vendeur reste responsable de ses informations, stocks et délais.</p><p>Yaqeen contrôle l’accès à la publication et expose le périmètre exact de la preuve revue, sans transformer cette revue en promesse générale.</p></div><Link href={shopHref(product.shopSlug)} className="product-shop-link">Découvrir la boutique {product.shop} →</Link></section>
     {related.length>0&&<section className="related"><div><p>DANS LE MÊME UNIVERS</p><h2>À découvrir aussi</h2></div><div>{related.map(item=><Link href={productHref(item)} key={item.id}><div className="related-photo"><Image src={item.media[0].url} alt={item.media[0].altText} fill sizes="280px" unoptimized/></div><p>{item.shop}</p><h3>{item.name}</h3><strong>{formatPrice(item.price,item.currency)}</strong></Link>)}</div></section>}
+    <MarketFooter />
   </main>;
 }

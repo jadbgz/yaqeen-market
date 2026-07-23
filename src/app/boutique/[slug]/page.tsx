@@ -7,6 +7,7 @@ import { getPublicShop, getPublicShopProducts } from "@/lib/catalog/dal";
 import { formatPrice } from "@/lib/catalog/format";
 import { productHref, shopHref } from "@/lib/catalog/types";
 import { getSiteUrl } from "@/lib/supabase/config";
+import { MarketFooter } from "@/components/market-footer";
 
 type ShopRouteProps = {
   params: Promise<{ slug: string }>;
@@ -81,6 +82,6 @@ export default async function ShopPage({ params, searchParams }: ShopRouteProps)
     </nav>}
 
     <section className="shop-trust"><p>NOTRE ENGAGEMENT</p><h2>Pourquoi cette boutique<br/>est publiée sur Yaqeen<span>.</span></h2><div><p>Le dossier de {shop.name} a été revu par l’équipe Yaqeen avant publication. Chaque produit affiché ici a été soumis individuellement à la revue Yaqeen : preuve déclarée ou certifiée, médias vérifiés, publication décidée par un opérateur et tracée.</p><p>Le vendeur reste responsable de ses informations, de ses stocks et de ses délais. Yaqeen contrôle l’accès à la publication et sécurise votre paiement.</p></div></section>
-    <footer className="catalog-footer"><p className="brand-mark">yaqeen<span>✦</span></p><span>Une marketplace. Plusieurs boutiques. Un même niveau d’exigence.</span></footer>
+    <MarketFooter />
   </main>;
 }

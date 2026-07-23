@@ -27,7 +27,7 @@ export function MarketHeader({ query = "" }: { query?: string }) {
             </div>
           </details>
           {categories.slice(1).map((category) => <Link key={category} href={`/catalogue?category=${encodeURIComponent(category)}`}>{category}</Link>)}
-          <Link href="/catalogue" className="category-all">Tout explorer →</Link>
+          <span className="category-scroll-hint" aria-hidden="true" />
         </div>
       </nav>
     </header>

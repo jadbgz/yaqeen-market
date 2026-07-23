@@ -19,6 +19,7 @@ function FieldError({ messages }: { messages?: string[] }) {
 
 export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | null; redirectTo: string }) {
   const [open, setOpen] = useState<Mode | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const initialAuthState: AuthState = { status: "idle" };
   const [loginState, loginAction, loginPending] = useActionState(login, initialAuthState);
   const [signupState, signupAction, signupPending] = useActionState(signup, initialAuthState);
@@ -59,7 +60,7 @@ export function AccountAccessClient({ viewer, redirectTo }: { viewer: Viewer | n
               <input type="hidden" name="redirectTo" value={redirectTo} />
               {open === "join" && <label>Votre nom<input name="displayName" autoComplete="name" required minLength={2} maxLength={80} /><FieldError messages={state.fieldErrors?.displayName} /></label>}
               <label>Adresse e-mail<input name="email" type="email" autoComplete="email" placeholder="vous@exemple.fr" required /><FieldError messages={state.fieldErrors?.email} /></label>
-              <label>Mot de passe<input name="password" type="password" autoComplete={open === "login" ? "current-password" : "new-password"} placeholder="8 caractères minimum" required minLength={8} maxLength={72} /><FieldError messages={state.fieldErrors?.password} /></label>
+              <label>Mot de passe<span className="password-field"><input name="password" type={showPassword ? "text" : "password"} autoComplete={open === "login" ? "current-password" : "new-password"} placeholder="8 caractères minimum" required minLength={8} maxLength={72} /><button type="button" aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Masquer" : "Afficher"}</button></span><FieldError messages={state.fieldErrors?.password} /></label>
               {state.message && <p className={`account-feedback ${state.status}`}>{state.message}</p>}
               <button type="submit" disabled={pending} className="account-submit">{pending ? "Un instant…" : open === "login" ? "Se connecter →" : "Créer mon compte →"}</button>
             </form>

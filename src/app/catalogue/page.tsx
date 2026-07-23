@@ -5,6 +5,7 @@ import { getPublicCatalogPage, getPublicCategoryCounts } from "@/lib/catalog/dal
 import { categories, formatPrice } from "@/lib/catalog/format";
 import { catalogHref, parseCatalogSearch } from "@/lib/catalog/search";
 import { productHref } from "@/lib/catalog/types";
+import { MarketFooter } from "@/components/market-footer";
 
 export const metadata = {
   title: "Catalogue — Yaqeen Market",
@@ -50,6 +51,6 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
       <strong>Page {page} / {pageCount}</strong>
       {page < pageCount ? <Link href={catalogHref(search, { page: page + 1 })} rel="next">Page suivante →</Link> : <span aria-disabled="true">Page suivante →</span>}
     </nav>}
-    <footer className="catalog-footer"><p className="brand-mark">yaqeen<span>✦</span></p><span>Une marketplace. Plusieurs boutiques. Un même niveau d’exigence.</span></footer>
+    <MarketFooter />
   </main>;
 }

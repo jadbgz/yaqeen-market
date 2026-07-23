@@ -37,4 +37,21 @@ test.describe("public marketplace navigation", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Votre panier est vide." })).toBeVisible();
     await expect(page.getByRole("link", { name: "Voir le catalogue" })).toBeVisible();
   });
+
+  test("the public footer exposes real trust and help destinations", async ({ page }) => {
+    await page.goto("/aide");
+
+    await expect(page.getByRole("heading", { level: 1, name: /Comprendre/ })).toBeVisible();
+    const footer = page.getByRole("navigation", { name: "Pied de page" });
+    await expect(footer.getByRole("link", { name: "Livraison & retours" })).toHaveAttribute("href", "/aide#livraison");
+    await expect(footer.getByRole("link", { name: "Vendre sur Yaqeen" })).toHaveAttribute("href", "/seller");
+  });
+
+  test("seller fallback stays useful without exposing configuration instructions", async ({ page }) => {
+    await page.goto("/seller");
+
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre boutique");
+    await expect(page.getByText("variables Supabase")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Voir le fonctionnement" })).toBeVisible();
+  });
 });
