@@ -9,7 +9,7 @@ select has_type('public','payment_refund_status','refund status enum exists');
 select has_function('public','request_shop_order_refund',array['uuid','text','text','text'],'operator refund boundary exists');
 select has_function('public','apply_stripe_refund_state',array['uuid','text','text','bigint','text','text'],'webhook refund boundary exists');
 select has_function('public','prepare_transfer_reversal',array['uuid','text'],'reversal preparation boundary exists');
-select policies_are('public','payment_refunds',array['payment_refunds_party_read']);
+select policies_are('public','payment_refunds',array['payment_refunds_operator_read']);
 select policies_are('public','payment_transfer_reversals',array['payment_transfer_reversals_operator_read']);
 select ok(has_function_privilege('authenticated','public.request_shop_order_refund(uuid,text,text,text)','EXECUTE'),'authenticated operator reaches request boundary');
 select ok(not has_function_privilege('authenticated','public.apply_stripe_refund_state(uuid,text,text,bigint,text,text)','EXECUTE'),'clients cannot forge Stripe refund state');
@@ -92,7 +92,7 @@ select is((select status::text from public.orders where id='72000000-0000-4000-8
 
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"70000000-0000-4000-8000-000000000003","role":"authenticated"}';
-select is((select count(*)::bigint from public.payment_refunds),2::bigint,'customer can read refunds for their order');
+select is((select count(*)::bigint from public.payment_refunds),0::bigint,'customer cannot read the internal refund ledger');
 select is((select count(*)::bigint from public.payment_transfer_reversals),0::bigint,'customer cannot read internal reversals');
 reset role;
 set local role authenticated;
