@@ -1,6 +1,6 @@
 # Roadmap technique produit
 
-- Référence : état du dépôt au 18 juillet 2026
+- Référence : état du dépôt au 23 juillet 2026
 - Portée : web Next.js, application Expo, Supabase/PostgreSQL, sécurité et exploitation
 - Objectif : passer d'un socle marketplace fiable à une première commande réelle livrée
 
@@ -15,9 +15,10 @@ Cette roadmap publique reprend uniquement les priorités techniques partageables
 - workflow vendeur/opérateur avec décisions de modération tracées ;
 - storefront web et mobile alimenté par le même catalogue public audité ;
 - authentification et compte client partagés avec Expo, avec session chiffrée sur iOS/Android ;
-- CI web, mobile et base, avec 485 assertions pgTAP incluant des scénarios d'attaque.
+- CI web, mobile et base, avec 650 assertions pgTAP incluant des scénarios d'attaque.
 - noyau de commande multi-vendeur avec prix figés, sous-commandes, réservations idempotentes, annulation et expiration auditée.
 - Stripe Connect sandbox câblé sur le web : onboarding hébergé, Payment Element, webhook signé et consommation atomique du stock.
+- gate de staging protégée : identité exacte du release, sondes PostgreSQL/Stripe test et smoke test distant du checkout.
 
 La confirmation de livraison, la libération vendeur, le remboursement intégral par sous-commande et le reversal associé sont disponibles en bac à sable avec rapprochement strict. Les retours, remboursements partiels, litiges, payouts et l’activation live restent volontairement indisponibles tant que leur chaîne complète n'est pas fiable.
 
@@ -130,7 +131,7 @@ Les sujets RGPD, P2B, DSA, CGV, fiscalité, facturation et médiation doivent ê
 1. [x] pagination, recherche et filtres SQL du catalogue ;
 2. [x] cycle éditorial des brouillons et révisions atomiques des produits publiés ;
 3. [x] dossier documentaire privé des preuves et renouvellement sans interruption ; brancher quarantaine antivirus/CDR et politique de rétention avant ouverture publique ;
-4. environnement staging relié à Supabase/Stripe, smoke tests de paiement et parcours E2E authentifiés ;
+4. [~] gate de staging, identité de release et sondes Supabase/Stripe livrées ; relier les ressources externes puis compléter le parcours E2E authentifié ;
 5. rate limiting distribué, MFA opérateur, observabilité et alertes webhooks ;
 6. premiers binaires EAS internes sur appareils iOS et Android physiques.
 

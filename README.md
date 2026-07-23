@@ -77,3 +77,14 @@ npm run test:e2e
 ```
 
 Les tests E2E démarrent Next.js sur le port `3100` et vérifient les parcours publics sur des profils bureau et mobile. Le parcours de commande connecté nécessite l'environnement de staging et sera activé séparément.
+
+## Qualifier un staging
+
+Le serveur expose une sonde publique minimale sur `/api/health/live` et une
+sonde profonde protégée sur `/api/health/ready`. La configuration, l'identité
+du commit, Supabase et Stripe test doivent toutes être valides avant que la
+seconde retourne `ready`.
+
+Le contrat complet, les variables GitHub et la séquence de contrôle sont
+décrits dans [`docs/STAGING-RUNBOOK.md`](docs/STAGING-RUNBOOK.md). Aucun
+environnement distant n'est créé ou relié automatiquement depuis le dépôt.

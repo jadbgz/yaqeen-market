@@ -33,3 +33,15 @@ test("robots excludes private and transactional surfaces", async ({ request }) =
   expect(robots).toContain("Disallow: /seller");
   expect(robots).toContain("Sitemap:");
 });
+
+test("health endpoints separate public liveness from protected readiness", async ({ request }) => {
+  const live = await request.get("/api/health/live");
+  expect(live.status()).toBe(200);
+  expect(live.headers()["cache-control"]).toContain("no-store");
+  await expect(live.json()).resolves.toEqual({ status: "ok" });
+
+  const ready = await request.get("/api/health/ready");
+  expect(ready.status()).toBe(404);
+  expect(ready.headers()["cache-control"]).toContain("no-store");
+  await expect(ready.json()).resolves.toEqual({ error: "not_found" });
+});

@@ -37,6 +37,24 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Verify the web staging release contract
+        env:
+          YAQEEN_ENVIRONMENT: staging
+          YAQEEN_RELEASE_SHA: 0123456789abcdef0123456789abcdef01234567
+          YAQEEN_HEALTHCHECK_TOKEN: ci_health_token_0123456789abcdef0123456789abcdef
+          NEXT_PUBLIC_SITE_URL: https://ci-staging.yaqeen.example
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-staging.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_staging_contract
+          SUPABASE_SERVICE_ROLE_KEY: sb_service_role_ci_staging_contract_0123456789
+          STRIPE_TEST_CHECKOUT_ENABLED: "true"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_staging_contract_012345
+          STRIPE_SECRET_KEY: sk_test_ci_staging_contract_012345
+          STRIPE_WEBHOOK_SECRET: whsec_ci_staging_contract_012345
+        run: npm run release:check:web
+      - name: Verify production remains locked
+        env:
+          YAQEEN_ENVIRONMENT: production
+        run: if npm run release:check:web; then exit 1; fi
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
