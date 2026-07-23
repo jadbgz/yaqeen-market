@@ -9,6 +9,7 @@ export type Viewer = {
   email: string | null;
   displayName: string | null;
   role: "customer" | "seller" | "operator" | "admin";
+  aal: "aal1" | "aal2";
 };
 
 export const getViewer = cache(async (): Promise<Viewer | null> => {
@@ -35,5 +36,6 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     email: typeof claimData.claims.email === "string" ? claimData.claims.email : null,
     displayName: profile?.display_name ?? null,
     role: safeRole,
+    aal: claimData.claims.aal === "aal2" ? "aal2" : "aal1",
   };
 });
