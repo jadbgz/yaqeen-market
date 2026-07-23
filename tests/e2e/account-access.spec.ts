@@ -8,6 +8,12 @@ test("account access switches between login and registration", async ({ page }) 
   await expect(loginDialog).toBeVisible();
   await expect(loginDialog.getByLabel("Adresse e-mail")).toBeVisible();
   await expect(loginDialog.getByLabel("Mot de passe")).toBeVisible();
+  const password = loginDialog.getByLabel("Mot de passe");
+  await password.fill("motdepasse");
+  await loginDialog.getByRole("button", { name: "Afficher" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await loginDialog.getByRole("button", { name: "Masquer" }).click();
+  await expect(password).toHaveAttribute("type", "password");
   await expect(loginDialog.getByRole("link", { name: "Mot de passe oublié ?" })).toBeVisible();
 
   await loginDialog.getByRole("button", { name: "Créer un compte" }).click();
