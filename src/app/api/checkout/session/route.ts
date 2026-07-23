@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { getViewer } from "@/lib/auth/dal";
 import { createCheckoutSession, checkoutRequestSchema } from "@/lib/payments/checkout";
 import { getStripeTestConfig } from "@/lib/payments/config";
 import { isSameOriginRequest } from "@/lib/payments/origin";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { rejectedRateLimitResponse } from "@/lib/security/rate-limit-response";
+import { getTrustedClientIp } from "@/lib/security/request-identity";
 
 export const runtime = "nodejs";
 
@@ -21,6 +25,23 @@ export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
   }
+
+  const ipDecision = await enforceRateLimit("checkoutIp", [
+    { kind: "ip", value: getTrustedClientIp(request.headers) },
+  ]);
+  const ipRejection = rejectedRateLimitResponse(ipDecision);
+  if (ipRejection) return ipRejection;
+
+  const viewer = await getViewer();
+  if (!viewer) {
+    return NextResponse.json({ error: "authentication_required" }, { status: 401 });
+  }
+  const userDecision = await enforceRateLimit("checkoutUser", [
+    { kind: "user", value: viewer.id },
+  ]);
+  const userRejection = rejectedRateLimitResponse(userDecision);
+  if (userRejection) return userRejection;
+
   if (!getStripeTestConfig()) {
     return NextResponse.json({ error: "stripe_test_checkout_unconfigured" }, { status: 503 });
   }

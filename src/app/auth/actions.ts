@@ -1,7 +1,13 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  enforceRateLimit,
+  type RateLimitPolicy,
+} from "@/lib/security/rate-limit";
+import { getTrustedClientIp } from "@/lib/security/request-identity";
 import { getSiteUrl, getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,7 +51,10 @@ function providerError(message: string): AuthState {
     return { status: "error", message: "E-mail ou mot de passe incorrect." };
   }
   if (normalized.includes("already registered") || normalized.includes("already been registered")) {
-    return { status: "error", message: "Un compte existe déjà avec cette adresse e-mail." };
+    return {
+      status: "confirmation",
+      message: "Vérifiez votre boîte e-mail pour confirmer la création de votre compte.",
+    };
   }
 
   return { status: "error", message: "La demande n’a pas pu aboutir. Réessayez dans quelques instants." };
@@ -64,6 +73,27 @@ function isRecoverySession(claims: Record<string, unknown>) {
   );
 }
 
+async function authRateLimit(policy: RateLimitPolicy): Promise<AuthState | null> {
+  const requestHeaders = await headers();
+  const decision = await enforceRateLimit(policy, [
+    { kind: "ip", value: getTrustedClientIp(requestHeaders) },
+  ]);
+
+  if (decision.status === "limited") {
+    return {
+      status: "error",
+      message: "Trop de tentatives. Patientez avant de réessayer.",
+    };
+  }
+  if (decision.status === "unavailable") {
+    return {
+      status: "error",
+      message: "La protection de sécurité est momentanément indisponible. Réessayez dans quelques instants.",
+    };
+  }
+  return null;
+}
+
 export async function login(
   _previousState: AuthState,
   formData: FormData,
@@ -77,6 +107,8 @@ export async function login(
   if (!parsed.success) {
     return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
   }
+  const rateLimitState = await authRateLimit("authLoginIp");
+  if (rateLimitState) return rateLimitState;
   if (!getSupabaseConfig()) return unavailableState();
 
   const supabase = await createClient();
@@ -100,6 +132,8 @@ export async function signup(
   if (!parsed.success) {
     return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
   }
+  const rateLimitState = await authRateLimit("authSignupIp");
+  if (rateLimitState) return rateLimitState;
   if (!getSupabaseConfig()) return unavailableState();
 
   const supabase = await createClient();
@@ -135,6 +169,8 @@ export async function requestPasswordReset(
 ): Promise<AuthState> {
   const parsed = resetSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
+  const rateLimitState = await authRateLimit("authResetIp");
+  if (rateLimitState) return rateLimitState;
   if (!getSupabaseConfig()) return unavailableState();
 
   const supabase = await createClient();

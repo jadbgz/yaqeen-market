@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { checkoutRequestSchema, createCheckoutSession } from "@/lib/payments/checkout";
 import { getStripeTestConfig } from "@/lib/payments/config";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { rejectedRateLimitResponse } from "@/lib/security/rate-limit-response";
+import { getTrustedClientIp } from "@/lib/security/request-identity";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -27,8 +31,26 @@ function safeError(error: unknown) {
 }
 
 export async function POST(request: Request) {
+  const ipDecision = await enforceRateLimit("checkoutIp", [
+    { kind: "ip", value: getTrustedClientIp(request.headers) },
+  ]);
+  const ipRejection = rejectedRateLimitResponse(ipDecision);
+  if (ipRejection) return ipRejection;
+
   const accessToken = bearerToken(request);
   if (!accessToken) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
+
+  const { data: identity, error: identityError } =
+    await createAdminClient().auth.getUser(accessToken);
+  if (identityError || !identity.user) {
+    return NextResponse.json({ error: "authentication_required" }, { status: 401 });
+  }
+  const userDecision = await enforceRateLimit("checkoutUser", [
+    { kind: "user", value: identity.user.id },
+  ]);
+  const userRejection = rejectedRateLimitResponse(userDecision);
+  if (userRejection) return userRejection;
+
   if (!getStripeTestConfig()) return NextResponse.json({ error: "stripe_test_checkout_unconfigured" }, { status: 503 });
 
   let body: unknown;
