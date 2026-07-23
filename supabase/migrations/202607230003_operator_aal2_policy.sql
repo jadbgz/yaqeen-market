@@ -54,9 +54,6 @@ security definer
 set search_path = ''
 as $$
 begin
-  if (select auth.role()) <> 'service_role' then
-    raise exception using errcode = '42501', message = 'service_role_required';
-  end if;
   if requested_enabled is null then
     raise exception using errcode = '22023', message = 'aal2_policy_state_required';
   end if;
