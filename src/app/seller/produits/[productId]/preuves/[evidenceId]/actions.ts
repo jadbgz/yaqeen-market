@@ -5,11 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getViewer } from "@/lib/auth/dal";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getSellerProduct } from "@/lib/seller/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_BYTES = 6 * 1024 * 1024;
 const idsSchema = z.object({ productId: z.string().uuid(), evidenceId: z.string().uuid() });
 
 function dossierHref(productId: string, evidenceId: string, state: string): never {
@@ -18,16 +19,24 @@ function dossierHref(productId: string, evidenceId: string, state: string): neve
 
 async function ownedPendingEvidence(formData: FormData) {
   const ids = idsSchema.safeParse({ productId: formData.get("productId"), evidenceId: formData.get("evidenceId") });
-  if (!ids.success || !await getViewer()) redirect("/seller/produits");
+  const viewer = await getViewer();
+  if (!ids.success || !viewer) redirect("/seller/produits");
   const product = await getSellerProduct(ids.data.productId);
   const evidence = product?.evidence.find((proof) => proof.id === ids.data.evidenceId);
   if (!product || !evidence || evidence.status !== "pending") redirect("/seller/produits");
-  return { product, evidence };
+  return { product, evidence, viewer };
 }
 
 export async function uploadEvidenceDocumentAction(formData: FormData) {
-  const { product, evidence } = await ownedPendingEvidence(formData);
+  const { product, evidence, viewer } = await ownedPendingEvidence(formData);
   if (evidence.document) dossierHref(product.id, evidence.id, "already_uploaded");
+
+  const decision = await enforceRateLimit("evidenceDocumentUser", [
+    { kind: "user", value: viewer.id },
+  ]);
+  if (decision.status === "limited") dossierHref(product.id, evidence.id, "rate_limited");
+  if (decision.status === "unavailable") dossierHref(product.id, evidence.id, "security_unavailable");
+
   const file = formData.get("document");
   if (!(file instanceof File) || file.type !== "application/pdf" || file.size < 5 || file.size > MAX_PDF_BYTES || !file.name.toLowerCase().endsWith(".pdf")) {
     dossierHref(product.id, evidence.id, "invalid_file");

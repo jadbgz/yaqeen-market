@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
+const MAX_WEBHOOK_BYTES = 512 * 1024;
 const HANDLED_EVENTS = new Set([
   "payment_intent.succeeded",
   "payment_intent.processing",
@@ -45,6 +46,34 @@ function safeErrorCode(error: unknown) {
   return "stripe_processing_failed";
 }
 
+async function readBoundedPayload(request: Request) {
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength) {
+    const parsedLength = Number(declaredLength);
+    if (!Number.isSafeInteger(parsedLength) || parsedLength < 0) return null;
+    if (parsedLength > MAX_WEBHOOK_BYTES) return null;
+  }
+
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let payload = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_WEBHOOK_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    payload += decoder.decode(value, { stream: true });
+  }
+
+  return payload + decoder.decode();
+}
+
 export async function POST(request: Request) {
   const config = getStripeTestConfig();
   if (!config) return NextResponse.json({ error: "webhook_unconfigured" }, { status: 503 });
@@ -52,7 +81,10 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "signature_required" }, { status: 400 });
 
-  const payload = await request.text();
+  const payload = await readBoundedPayload(request);
+  if (payload === null) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
   const stripe = getStripe();
   let event: Stripe.Event;
   try {

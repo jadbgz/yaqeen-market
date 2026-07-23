@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { z } from "zod";
 import { getViewer } from "@/lib/auth/dal";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_SOURCE_BYTES = 6 * 1024 * 1024;
@@ -27,7 +28,14 @@ export async function uploadProductMedia(formData: FormData) {
   });
   const fallbackId = typeof formData.get("productId") === "string" ? String(formData.get("productId")) : "";
   if (!parsed.success) mediaRedirect(fallbackId, "invalid");
-  if (!await getViewer()) mediaRedirect(parsed.data.productId, "session");
+  const viewer = await getViewer();
+  if (!viewer) mediaRedirect(parsed.data.productId, "session");
+
+  const decision = await enforceRateLimit("productMediaUser", [
+    { kind: "user", value: viewer.id },
+  ]);
+  if (decision.status === "limited") mediaRedirect(parsed.data.productId, "rate_limited");
+  if (decision.status === "unavailable") mediaRedirect(parsed.data.productId, "security_unavailable");
 
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0 || file.size > MAX_SOURCE_BYTES || !acceptedTypes.has(file.type)) {
