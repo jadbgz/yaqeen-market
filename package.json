@@ -20,10 +20,10 @@
     "@stripe/stripe-js": "^9.10.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.6",
-    "next": "16.2.10",
+    "next": "16.2.11",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "^0.34.5",
+    "sharp": "0.35.3",
     "stripe": "^22.3.2",
     "zod": "^4.4.3"
   },
@@ -34,12 +34,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.11",
     "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "8.5.21"
+    "postcss": "8.5.21",
+    "sharp": "$sharp"
   }
 }
